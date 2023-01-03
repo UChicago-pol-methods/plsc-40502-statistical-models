@@ -1,0 +1,405 @@
+---
+title: "Week 1: Likelihood Inference"
+subtitle: "PLSC 40502 - Causal Inference"
+# author: "Anton Strezhnev"
+output: 
+  xaringan::moon_reader:
+    self_contained: true
+    css: [default, uchicago_pol_meth.css]
+    nature:
+      highlightLines: true
+      
+---
+class: title-slide
+
+# Welcome!
+$$
+  \require{cancel}
+  \DeclareMathOperator*{\argmin}{arg\,min}
+$$
+---
+
+# Course Overview
+
+- Instructor: .maroon[Anton Strezhnev]
+--
+
+- Logistics:
+  - Lectures T/Th - 2:00am - 12:20pm; Sections F - 10:30 - 11:20am
+  - 3 Problem Sets (~ 2 weeks)
+  - Final paper project (8-12 pages)
+  - My office hours: Tuesdays 4pm-6pm (Pick 328)
+--
+
+- What is this course about?
+  - *Defining* statistical models via their data-generating process
+  - *Estimating* model parameters and conducting *inference*
+  - *Interpreting* model output and *evaluating* model quality
+--
+
+- Goals for the course
+  - Give you the tools you need to understand descriptive inference via statistical models and comment 
+  on other researchers' work.
+  - Equip you with an understanding of the fundamentals of likelihood and Bayesian inference
+  to enable you to learn new models that build on these principles.
+  - Teach you how to program and implement estimators by yourself!
+
+---
+
+# Course workflow 
+
+- .maroon[Lectures]
+  - Topics organized by week
+  - Tuesday lecture: Introduction + higher-level overview
+  - Thursday lecture: More in-depth details + applications
+    - Lectures are the ``course notes" -- readings are the reference manuals.
+--
+- .maroon[Readings]
+  - Mix of textbooks and papers
+  - All readings available digitally on .maroon[Canvas]
+  
+---
+
+# Course workflow
+
+- .maroon[Problem sets] (35% of your grade)
+  - Meant as a check on your understanding of the material and a way of communicating
+  with me about the course.
+  - The goal is learning by doing. So I'm not grading on correctness but more 
+  on effort.
+  - Solutions **will be posted** a week after the problem set is released. You
+  should work on the problem sets without them but check your work afterward.
+  - In addition to your write-up, you will also submit a brief survey about which questions
+  you found challenging and needed to consult the solutions for + any concepts that are still unclear
+  - Collaboration is **strongly encouraged** -- you should ask and answer questions on our private class
+  Stack Overflow (link + invitation in the syllabus).
+  
+---
+
+# Course workflow
+
+- .maroon[Final Project] (55% of your grade)
+  - The main goal of this class is for you to develop an independent quantitative research project
+  - The paper should be in the length and style of a research note (8-12 pages)
+    - One well-motivated question + data and analysis (minimize the lit review!)
+  - You can collaborate! (1-3 authors per paper).
+  - See the syllabus for published examples of the style/method of a paper that fits the aims of this class.
+    - Survey data is a great place to ask descriptive questions
+    - But feel free to use other sources or ask different types of questions - just talk to me about it!
+--
+- .maroon[Final Project Timeline]
+  - **February 2nd**: 1 page project memo due
+  - **February 28th/March 2nd**: Research presentations in-class (10-15 min. talks + Q&A)
+  - **March 9**: Final paper due
+
+---
+
+# Class Requirements
+
+- **Overall**: An interest in learning and willingness to ask questions.
+--
+
+- Assume a background in intro probability and statistics 
+  - You should be comfortable thinking about basic estimands/estimators + their properties
+  - You should be able to interpret a confidence interval for (e.g.) a difference-in-means.
+--
+
+- You should also be familiar with linear regression
+  - $\hat{\beta} = (\mathbf{X}^{\prime}\mathbf{X})^{-1}\mathbf{X}^{\prime}Y$ should be a familiar expression
+  - You should know under what conditions it's unbiased for $E[Y|X]$, and under what conditions it's efficient.
+--
+
+- If you want some review, check out chapters 1-6 of "Regression and Other Stories" 
+
+---
+
+# A brief overview
+
+- **Week 1-2:** Introduction to likelihood inference and GLMs
+  - Concept of the likelihood, MLE as an estimator + asymptotic properties
+  - Binary outcome models, count models, duration models
+--
+
+- **Week 3-4:** Bayesian Inference and Multilevel Models
+  - Principles of Bayesian inference -- posteriors, priors, data
+  - Quantities of interest: posterior means, credible intervals
+  - Estimation via MCMC
+  - Application to multilevel regression models
+--
+
+- **Week 5:** Survey data
+  - Applying multilevel regression methods to survey data
+  - Survey weighting to address non-random sampling.
+--
+
+- **Week 6:** Mixture Models
+--
+
+- **Week 7:** Item response theory and ideal point models
+--
+
+- **Week 8:** Penalized regression and model selection
+--
+
+- **Week 9:** Research presentations + miscellaneous
+---
+class: title-slide
+
+# Defining a statistical model
+
+---
+
+# Regression review
+
+- A very common goal in statistics is to learn about the conditional expectation function $\mathbb{E}[Y|X]$
+  - $Y_i$: Outcome/response/dependent variable
+  - $X_i$: Vector of regressor/independent variables 
+- "How does the expected value of $Y$ differ across different values of $X$?"
+--
+
+- Suppose we observe $N$ paired observations of $\{Y_i, X_i\}$. 
+  - How do we construct a "good" estimator of $\mathbb{E}[Y|X]$?
+  - What assumptions do we have to make to get...consistency...unbiasedness...efficiency?
+--
+
+- Consider the ordinary least squares estimator $\hat{\beta}$ which solves the minimization problem:
+  
+$$\hat{\beta} = \argmin_b \ \sum_{i=1}^N (Y_i - X_ib)^2$$
+--
+
+- We can do some algebra and find a closed form solution for this optimization problem
+
+$$\hat{\beta} = (\mathbf{X}^{\prime}\mathbf{X})^{-1}(\mathbf{X}^{\prime}Y)$$
+---
+
+# Regression review
+
+- **Assumption 1**: Linearity 
+
+ $$Y = \mathbf{X}\beta + \epsilon$$
+--
+
+- **Assumption 2**: Strict exogeneity of the errors
+
+ $$E[\epsilon | \mathbf{X}] = 0$$
+--
+
+- These two imply:
+
+  - Linear CEF
+  
+$$\mathbb{E}[Y|\mathbf{X}] = \mathbf{X}\beta = \beta_0 + \beta_1X_{1} + \beta_2X_{2} + \dotsc \beta_kX_{k}$$
+--
+
+- **Best case**: Our CEF is truly linear (by luck or we have a *saturated* model)
+- **Usual case**: We're at least consistent for the *best linear approximation* to the CEF
+
+---
+
+# Regression review
+
+- **Assumption 3**: No perfect collinearity
+  - $\mathbf{X}^{\prime}\mathbf{X}$ is invertible
+  - $\mathbf{X}$ has full column rank
+--
+
+- This assumption is needed for *identifiability* -- otherwise no unique solution to the least squares minimization problem exists!
+--
+
+- Fails when one column can be written as a linear combination of the others
+  - Or when there are more regressors than observations $k > n$
+
+---
+
+
+# Regression review
+
+- Under assumptions 1-3, our OLS estimator $\hat{\beta}$ is unbiased and consistent for $\beta$
+- Let's do a quick proof for unbiasedness
+
+$$\begin{align*}\hat{\beta} &= (\mathbf{X}^{\prime}\mathbf{X})^{-1}(\mathbf{X}^{\prime}Y)\\
+ &= (\mathbf{X}^{\prime}\mathbf{X})^{-1}(\mathbf{X}^{\prime}(\mathbf{X}\beta + \epsilon))\\
+ &= (\mathbf{X}^{\prime}\mathbf{X})^{-1}(\mathbf{X}^{\prime}\mathbf{X})\beta + (\mathbf{X}^{\prime}\mathbf{X})^{-1}(\mathbf{X}^{\prime}\epsilon)\\
+ &= \beta + (\mathbf{X}^{\prime}\mathbf{X})^{-1}(\mathbf{X}^{\prime}\epsilon)
+ \end{align*}$$
+
+--
+
+- Then we can obtain the conditional expectation of $\mathbb{E}[\hat{\beta} | \mathbf{X}]$
+
+$$\begin{align*} \mathbb{E}[\hat{\beta} | \mathbf{X}] &= \mathbb{E}\bigg[\beta + (\mathbf{X}^{\prime}\mathbf{X})^{-1}(\mathbf{X}^{\prime}\epsilon) \bigg| \mathbf{X} \bigg]\\
+&= \mathbb{E}[\beta | \mathbf{X}] + \mathbb{E}[(\mathbf{X}^{\prime}\mathbf{X})^{-1}(\mathbf{X}^{\prime}\epsilon) | \mathbf{X}]\\
+&= \beta + (\mathbf{X}^{\prime}\mathbf{X})^{-1}\mathbf{X}^{\prime} \mathbb{E}[\epsilon | \mathbf{X}]\\
+&= \beta + (\mathbf{X}^{\prime}\mathbf{X})^{-1}\mathbf{X}^{\prime}0\\
+&= \beta
+ \end{align*}$$
+
+---
+
+# Regression review
+
+- Lastly, by law of total expectation 
+
+$$\mathbb{E}[\hat{\beta}] = \mathbb{E}[\mathbb{E}[\hat{\beta}|\mathbf{X}]]$$
+
+- Therefore 
+
+$$\mathbb{E}[\hat{\beta}] = \mathbb{E}[\beta] = \beta$$
+--
+
+- Consistency requires us to show the convergence of $(\mathbf{X}^{\prime}\mathbf{X})^{-1}(\mathbf{X}^{\prime}\epsilon)$ to $0$ in probability as $N \to \infty$.
+  - This actually requires *weaker* assumptions: $\mathbb{E}[\mathbf{X}^{\prime}\epsilon] = 0$ but not necessarily $\mathbb{E}[\epsilon | \mathbf{X}] = 0$.
+
+--
+- But what have we not assumed?
+  - Anything about the distribution of the errors!
+
+---
+
+# Regression review
+
+- **Assumption 4** - Spherical errors
+
+$$Var(\epsilon | \mathbf{X}) = \begin{bmatrix}
+\sigma^2 & 0 & \cdots & 0\\
+0 & \sigma^2 & \cdots & 0\\
+\vdots & \vdots & \ddots & \vdots \\
+0 & 0 & \cdots & \sigma^2
+\end{bmatrix} =  \sigma^2 \mathbf{I}$$
+
+--
+
+- Benefits
+  - Simple, unbiased estimator for the variance of $\hat{\beta}$
+  - Completes Gauss-Markov assumptions $\leadsto$ OLS is BLUE (Best Linear Unbiased Estimator)
+--
+
+- Drawbacks
+  - Basically never is true
+
+---
+
+# Regression review
+
+- Good news! We can relax homoskedasticity (but still keep no correlation) and do inference on the variance of $\hat{\beta}$
+
+$$Var(\epsilon | \mathbf{X}) = \begin{bmatrix}
+\sigma^2_1 & 0 & \cdots & 0\\
+0 & \sigma^2_2 & \cdots & 0\\
+\vdots & \vdots & \ddots & \vdots \\
+0 & 0 & \cdots & \sigma^2_n
+\end{bmatrix}$$
+
+--
+
+- "Robust" standard errors using the "sandwich" estimator - Consistent but not unbiased for the true sampling variance of $\hat{\beta}$
+  - Extensions to allow for forms of correlation in the error terms (e.g. "clustering")
+
+---
+
+# Regression review
+
+- **Assumption 5** - Normality of the errors
+
+$$\epsilon | \mathbf{X} \sim \mathcal{N}(0, \sigma^2)$$
+--
+
+- Not necessary even for Gauss-Markov assumptions
+- Not needed to do asymptotic inference on $\hat{\beta}$
+  - Why? Central Limit Theorem!
+
+--
+- Benefits?
+  - Finite-sample inference.
+  
+---
+
+# Regression review
+
+- What do we need for OLS to be consistent for the "best linear approximation" to the CEF?
+  - Very little!
+--
+
+- What do we need for OLS to be consistent and unbiased for the conditional expectation function?
+  - Truly linear CEF
+  - But still no assumptions about the outcome distribution!
+--
+
+- What do we need to do inference on $\hat{\beta}$?
+  - We almost never assume homoskedasticity because "robust" SE estimators are ubiquitous
+  - Even some forms of error correlation are permitted ("cluster" robust SEs)
+  - Sample sizes are usually large enough where Central Limit Theorem kicks in since $\hat{\beta}$ can be written as a weighted sum over $Y_i$. So normality isn't that important.
+
+---
+
+# Defining a statistical model
+
+- In the regression setting we tried to make as few assumptions about the data-generating process as possible.
+  - Our goal is just to estimate and conduct inference on $E[Y|X]$.
+--
+
+- But what if we wanted to make further probabilistic statements about other quantities beyond $\beta$?
+  - (e.g.) Can we provide a distribution for $Y_{n+1}$, the "next" observation given $X_{n}$?
+  - If we're willing to make more assumptions about the data-generating process, we can do a lot more!
+--
+
+- **Statistical models** specify the data-generating process in terms of *systematic* and *stochastic* components.
+  - *Systematic* elements are functions known constants and unknown *parameters*
+  - *Stochastic* elements are draws from probability distributions
+--
+
+- We will be primarily working with *parametric* models
+  - The data will be assumed to come from a particular family of probability distributions
+  - The "structure" of the model is assumed fixed (the number of parameters does not grow with the size of the data).
+
+---
+
+# The linear model
+
+- It is common to see the linear model written in its fully parametric form.
+- **Stochastic**:
+
+$$Y_i \sim \text{Normal}(\mu_i, \sigma^2)$$
+
+- **Systematic**:
+
+$$\mu_i = X_i^{\prime}\beta$$
+--
+
+- What's assumed to be known?
+  - $\mathbf{X}$
+- What's assumed to have a particular distribution?
+  - $Y$
+- We are interested in estimating and conducting inference on the parameters: $\beta$ and (less importantly) $\sigma^2$.
+
+---
+
+# General model notation
+
+- We can specify a broad set of models for $Y_i$ using this framework
+- **Stochastic**
+
+$$Y_i \sim f(\theta_i, \alpha)$$
+
+- **Systematic**
+
+$$\theta_i = g(X_i, \beta)$$
+
+- What are these quantities?
+  - $Y_i$ is a random variable
+  - $f()$ denotes the distribution of that random variable
+  - $\theta_i$ and $\alpha$ are parameters of that distribution
+  - $g()$ is some function 
+  - $X_i$ are observed, known constants (e.g. regressors)
+  - $\beta$ are parameters of interest 
+--
+
+- We will spend some time with a particular class of models called "Generalized Linear Models" where the systematic component has the form
+
+$$\theta_i = g(X_i^{\prime}\beta)$$
+
+---
+  
+  
+
+
