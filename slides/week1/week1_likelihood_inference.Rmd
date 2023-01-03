@@ -1,6 +1,6 @@
 ---
 title: "Week 1: Likelihood Inference"
-subtitle: "PLSC 40502 - Causal Inference"
+subtitle: "PLSC 40502 - Statistical Models"
 # author: "Anton Strezhnev"
 output: 
   xaringan::moon_reader:
