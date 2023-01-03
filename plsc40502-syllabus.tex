@@ -1,0 +1,378 @@
+\documentclass[11pt, article, oneside]{memoir}
+
+%% Required packages
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{graphicx, url}
+\usepackage{rotating}
+\usepackage{multicol}
+\usepackage[small,it]{caption}
+\usepackage{subfig}
+%\usepackage{fullpage, setspace}
+\usepackage{epigraph}
+\usepackage[all]{xy}
+\usepackage{verbatim}
+\usepackage[authordate, backend=biber, doi=false, isbn=false,
+            backref=true, maxbibnames=10, hyperref=true,
+            dateabbrev=false, uniquename=false]{biblatex-chicago}
+
+
+%% For putting floats at the end
+%\usepackage[nolists]{endfloat}
+
+
+%% XeLaTeX packages + options
+\usepackage{mathspec}
+\usepackage{xunicode}
+\defaultfontfeatures{Mapping=tex-text,Scale=MatchLowercase,Numbers=OldStyle}
+%\setsansfont{Helvetica Neue Light}
+%\setsansfont{Quicksand}
+\setsansfont{Linux Biolinum O}
+\setmainfont{Linux Libertine O}
+\setmonofont{Inconsolata}
+\setmathrm{Linux Libertine O}
+\setmathsfont(Latin)[Uppercase=Italic, Lowercase=Italic,
+Kerning=Off]{Linux Libertine O}
+\setmathsfont(Greek)[Uppercase=Regular, Lowercase=Regular]{Linux Libertine O}
+\setmathsfont(Digits)[Numbers={Lining,Proportional}]{Linux Libertine O}
+
+
+%% Tikz for drawing figures
+\usepackage{pgf, tikz}
+\usetikzlibrary{positioning}
+\usetikzlibrary{arrows}
+
+
+%% Fancy section labels
+\usepackage[compact]{titlesec}
+\titleformat{\section}[hang]{\Large\sffamily\bfseries}{\S{\addfontfeatures{Numbers=OldStyle}\thesection}}{1em}{}{}
+\titleformat{\subsection}[hang]{\large\sffamily\bfseries}{\addfontfeatures{Numbers=OldStyle}\thesubsection}{1em}{}
+\titlespacing*{\section}{0em}{1.5em}{0.5em}
+\titlespacing*{\subsection}{0em}{1.5em}{0.5em}
+
+
+\newcommand{\vs}{\vspace{-\baselineskip}}
+\theoremstyle{Assumption}
+\newtheorem{assump}{Assumption}
+\newcommand{\indep}{\perp\!\!\!\perp}
+
+%% Bibliography files
+%\addbibresource{mb.bib}
+%\addbibresource{gk.bib}
+%\addbibresource{gkpubs.bib}
+
+%% Put url links in titles of bibliography
+\ExecuteBibliographyOptions{url=false}
+\ExecuteBibliographyOptions{doi=false}
+\newbibmacro{string+url}[1]{%
+ \iffieldundef{doi}{\iffieldundef{url}{#1}{\href{\thefield{url}}{#1}}}{\href{http://dx.doi.org/\thefield{doi}}{#1}}}
+\DeclareFieldFormat{title}{\usebibmacro{string+url}{\mkbibemph{#1}}}
+\DeclareFieldFormat[article]{title}{\usebibmacro{string+url}{\mkbibquote{#1}}}
+\DeclareFieldFormat[misc]{title}{\usebibmacro{string+url}{\mkbibemph{#1}}}
+\DeclareFieldFormat[book]{title}{\usebibmacro{string+url}{\mkbibemph{#1}}}
+
+%% Name, Title, Affiliation, Contact. Change as needed.
+\def\myaffiliation{Department of Political Science, University of Chicago}
+\def\myauthor{Anton Strezhnev}
+\def\myemail{\texttt{\href{mailto:astrezhnev@uchicago.edu}{astrezhnev@uchicago.edu}}}
+\def\mywebsite{\mbox{\url{http://www.antonstrezhnev.com}}}
+\def\myaddress{Pick Hall 328, 3rd floor, 5828 S University Ave}
+\def\mytitle{PLSC 40502: Data Analysis with Statistical Models}
+\def\mykeywords{Anton Strezhnev, Statistical Models}
+
+
+%% Custom colors
+\definecolor{gray}{rgb}{0.459,0.438,0.471}
+\definecolor{crimson}{rgb}{0.34, 0.18, 0.55}
+
+
+%% Create a command to make a note at the top of the first page describing the
+%% publication status of the paper. 
+\newcommand{\published}[1]{% 
+   \gdef\puB{#1}} 
+   \newcommand{\puB}{} 
+   \renewcommand{\maketitlehooka}{% 
+       \par\noindent\small \puB} 
+
+\usepackage[plainpages=false, 
+            pdfpagelabels, 
+            bookmarksnumbered,
+            pdftitle={\mytitle}, 
+            pdfauthor={\myauthor},
+            pdfkeywords={\mykeywords},
+            colorlinks=true,
+            citecolor=crimson, 
+            linkcolor=crimson, 
+            urlcolor=crimson]{hyperref} 
+% \makeatletter
+% \newcommand\org@hypertarget{}
+% \let\org@hypertarget\hypertarget
+% \renewcommand\hypertarget[2]{%
+% \Hy@raisedlink{\org@hypertarget{#1}{}}#2%
+% } \makeatother
+
+
+%% blank label items; hanging bibs for text
+%% Custom hanging indent for vita items
+\def\ind{\hangindent=1 true cm\hangafter=1 \noindent}
+\def\labelitemi{$\cdot$}
+
+    % Title flush left
+    \pretitle{\begin{flushleft}\Huge\sffamily}
+    \posttitle{\end{flushleft}\par\vskip 0.5em}
+    \preauthor{\begin{flushleft}\sffamily  \Large \vspace{0.25em}}
+    \postauthor{\end{flushleft}}
+    \predate{\begin{flushleft}\sffamily \small\vspace{0.9em}}
+    \postdate{\end{flushleft}\par\vskip 2em}
+
+\title{{\mytitle}}
+
+\author{\myauthor\smallskip\footnotesize\newline Office: Pick Hall 328, 3rd floor
+  \newline Office Hours: Tuesdays 4pm-6pm or schedule an appointment by e-mail \newline
+    \myemail \newline \mywebsite
+\newline
+}
+
+\published{{\sffamily Winter 2023 | Lecture: Tues./Thurs.,  2:00pm-3:20pm, | Room: Hinds 184 (Lecture) | Units: 100}}
+
+\counterwithout{section}{chapter}
+
+\date{}
+\begin{document}
+\maketitle
+\textbf{Last Updated: 1/2/2023}
+\section*{Course Overview}
+
+Statistical models provide a structure for the analysis of data. Often many scientific questions revolve around drawing statistical inferences about some parameter, such as a regression coefficient. Models also allow researchers to generate predictions on new or out-of-sample data. Understanding the fundamentals of how to define, estimate and validate a statistical model is essential to the process of quantitative empirical research.
+
+This course is part of the second year of the Quantitative Methodology sequence in the Department of Political Science and builds on the first year sequence (PLSC 30500, 30600, 30700). It will introduce students to likelihood and Bayesian inference with a focus on multilevel/hierarchical regression models. The overarching framework of this class is model-based inference for description and prediction -- a complement to the design-based framework of PLSC 30600 Causal Inference. Students will learn both the theory behind Bayesian modeling as well as how to implement common estimators (e.g. Expectation-Maximization, Markov Chain Monte Carlo (MCMC)) in the R statistical programming language. Applied examples will be drawn from across the political science literature, with a particular emphasis on the analysis of large survey data (e.g. the American National Election Survey (ANES), the Cooperative Election Survey (CES), the European Social Survey (ESS)).
+
+This course will involve a combination of lectures and problem sets as well as final research project. Lectures will focus on introducing the core theoretical concepts being taught in this course as well as providing illustrations through worked applied examples. Problem sets will contain a mixture of both theoretical and applied questions and serve to reinforce key concepts and allow students to assess their progress and understanding throughout the course. The final project consists of an 8-12 page research note applying the methods taught in the course to an actual data analysis task. 
+
+Assignments will involve analysis of data using the R programming language. This is a free and open source language for statistical computing that is used extensively for data analysis in many fields. Prior experience with the fundamentals of R programming is required.
+
+\section*{Prerequisites}
+
+This course assumes that you have both a background in the core concepts of probability, statistics and inference as well as prior exposure to linear regression models. Completing the first three courses in the political science graduate methodology sequence should prepare you for the material in this class. However, there are no strict, specific course pre-requisites as many different disciplines and departments offer introductory statistics classes that cover the relevant material.
+
+If you are unsure of whether you meet the requirements, skim/read through the first six chapters of \textit{Regression and Other Stories}, one of the books being used by this course. You should find most of the concepts behind the material relatively familiar, aside from the references to Bayesian models (which will be covered in this course).
+
+Please contact the instructor at (\href{mailto:astrezhnev@uchicago.edu}{astrezhnev@uchicago.edu}) if you are interested in enrolling but are unsure of the requirements. 
+
+\section*{Logistics}
+
+\textbf{Lectures}: Tuesdays/Thursdays from 2:00pm - 3:20pm -- Location: Hinds 184
+\newline\newline \textbf{Disucssion Forum:} We will use a private \textsc{StackOverflow} forum as a course discussion platform at \url{https://stackoverflow.com/c/plsc-40502-statistical-models/}. See the Canvas page for more details on how to join.
+\newline\newline\textbf{Course Materials}: Lecture materials, assignments and section code will be posted on the course GitHub page at \url{https://github.com/UChicago-pol-methods/plsc-40502-statistical-models/}.
+
+Readings will be listed on the syllabus. I will also post links to any non-textbook readings on the Modules page on Canvas.
+
+\section*{Textbooks} 
+
+The course will involve readings from a variety of different textbook chapters and published papers. The class will not require the purchase of any textbook as they are available online. However, you may wish to obtain a paper copy for your own personal use or reference.
+
+The two primary textbooks from which many readings will be drawn are:
+
+\begin{itemize}
+\item Gelman, A., Hill, J., \& Vehtari, A. (2020). \textit{Regression and other stories.} Cambridge University Press. (An introduction to regression and multilevel modeling from an applied perspective) \url{https://avehtari.github.io/ROS-Examples/index.html}
+\item Gelman, A., Carlin, J., Stern H., Dunson, D., Vehtari A., \& Rubin, D. (2013). \textit{Bayesian Data Analysis.} 3rd Edition. Chapman and Hall/CRC. (A more advanced text on Bayesian modeling) \url{http://www.stat.columbia.edu/~gelman/book/}
+\end{itemize}
+
+
+\section*{Requirements}
+
+
+Students’ final grades are based on three components:
+\begin{itemize}
+
+        
+\item  \textbf{Final Project} (55\% of the course grade). The primary goal of this class is for students to guide students in completing an independent quantitative research project that could be developed into an academic publication. The final project is a paper in the style of a research note -- approximately 8-12 pages in length -- that answers a clear, well-defined social science research question and applies techniques related to what is covered in the course. As the methods discussed in the class are particularly popular and widely used in the analysis of survey data, I would encourage students to consider paper topics involving the analysis of data from a source such as the General Social Survey (GSS), American National Election Study (ANES), Cooperative Election Study (CES), or any other broad public opinion survey. However, this is merely an encouragement and you should consider writing on any topic that you are interested in as long as it involves some of the methods from this class. Replications and analyses of prior studies and datasets are also encouraged as long as the paper provides an original contribution and extension of the replicated work.
+\begin{itemize}
+	\item \textit{Timeline}: You should begin brainstorming topics early and consult with me regarding your project. Come to office hours, e-mail or just drop by Pick Hall! To make sure that the projects develop in a timely manner, you should be aware of the following three deadlines.
+	\begin{itemize}
+	\item \textbf{February 2nd: Paper topic memo due}. You will submit a short one to two page memo outlining your research proposal. In it, you should describe the main theoretical and/or empirical puzzle that the paper aims to resolve, a brief discussion of the motivations behind this question, and a description of the proposed data being used and the analyses that you will undertake. You do not need to have any actual results done by this point, but you should have acquired and begun working with the data.
+	\item \textbf{February 28th/March 2nd: In-class presentation}. You will present a brief (10-15 minute) summary of your research results in the style of a presentation at a large APSA/MPSA-style conference. 
+	\item \textbf{March 9th: Final paper due}. You will submit the final paper as well as a replication archive containing your data and code to the Canvas website.
+	\end{itemize}
+       \item \textit{Collaboration policy}: Co-authoring for the final project is encouraged, however each student is expected to contribute to the final product. I encourage students to use collaboration tools such as the \textsc{Github} version control system for managing edits to code and \textsc{Overleaf} for collaborating on the writing of the paper.
+	\item \textit{Examples}: Below are a handful of short papers that are good models for the kind of project that this class is designed to help you develop. These may be helpful guides for you in formulating your question, finding your dataset and choosing your analytical method:
+\begin{itemize}
+\item Butz, A. M., \& Kehrberg, J. E. (2016). Estimating anti-immigrant sentiment for the American states using multi-level modeling and post-stratification, 2004–2008. \textit{Research \& Politics}, 3(2).
+\item Butters, R., \& Hare, C. (2020). Polarized networks? New evidence on American voters’ political discussion networks. \textit{Political Behavior}, 1-25.
+\item Smith, C. W., Kreitzer, R. J., \& Suo, F. (2020). The dynamics of racial resentment across the 50 US states. \textit{Perspectives on Politics}, 18(2), 527-538.
+\end{itemize}
+      
+\end{itemize}
+
+\item \textbf{Problem sets} (35\% of the course grade). Students will complete a total of three problem sets throughout the quarter. Problem sets will primarily cover topics from the lecture and section for that week and the previous week.
+
+The goal of the problem sets is to encourage exploration of the material and to provide you with a clear and credible means of assessing your understanding and progress through the course. As such, problem sets are \textit{designed} to be challenging and I expect students to find some questions difficult. Because problem sets are mainly a tool for communication between the me and you, they will not be graded in the usual fashion.
+
+A few days after the release of the problem set, I will be posting the solution key. You should work through the problems \textit{without} the solutions for as long as you can, but should use the solutions after having completed your write-up to check your work. In addition to submitting your assignment write-up, you will also submit responses to a brief open-ended survey outlining which questions or topics you found easy or difficult, where you needed to consult the solutions, and what problems remain unclear or confusing. I will use these surveys to inform which topics to spend more time reviewing and to update the course to focus more on areas that students might be struggling with. 
+
+Problem sets will be graded on a (+/\checkmark/-) scale with a + awarded for complete and near-perfect work, a \checkmark awarded for generally good work with clear effort shown but with some errors, and a - awarded for significantly incomplete work with major conceptual errors and little effort shown. Since the solutions will be available to you, there is essentially no reason to not get a + if you put in the effort and complete the assignment and the survey. Although the solutions will be posted, I \textit{highly encourage} you to not simply copy and paste solutions and code from our files as this ultimately defeats the entire purpose of the problem sets.
+ 
+\begin{itemize}
+       \item \textit{Collaboration policy}: I strongly encourage collaboration between students on the problem sets and highly recommend that students discuss problems with each other either in person or via Stack Overflow. However, each student is expected to submit their own write-up of the answers and any relevant code. 
+        \item \textit{Office hours and online discussion}: Students should feel free to discuss any questions about the problem sets with me during class and during office hours. I also strongly encourage students to post questions about both the problem sets and the readings on the course Stack Overflow board and respond to other students’ questions. Responding to other students’ questions will contribute to your participation grade.
+        \item \textit{Submission guidelines}: Problem sets will be distributed as \texttt{PDF} and \texttt{Rmarkdown} files (\texttt{.Rmd}). You should submit your answers and any relevant R code in the same format: including an \texttt{Rmarkdown} file (\texttt{.Rmd} extension) and a corresponding rendered \texttt{.pdf} file as your submission. \texttt{Rmarkdown} combines the text formatting syntax of Markdown markup language with the ability to embed and execute chunks of \texttt{R} code directly into a text document. This allows you to present your code, graphical output, and discussion/write-up all in the same document. I highly recommend that you edit the distributed \texttt{Rmarkdown} assignment file for each problem set directly to make organization easier.
+        \end{itemize}
+
+    \item \textbf{Participation} (10\% of the course grade). I expect students to take an active role in learning in lecture. Engagement with the teaching staff by asking and answering questions will contribute to this grade as will interaction on the \textsc{Stack Overflow} board.
+\end{itemize}
+
+\section*{Computing}
+
+This course will use the \texttt{R} programming language. This is a free and open source programming language that is available for nearly all computing platforms. You should download and install it from \url{http://www.r-project.org}. Unless you have strong preferences for a specific coding environment, I also highly recommend that you use the free \href{https://rstudio.com}{RStudio} Desktop Integrated Development Environment (IDE) which you can download from \url{https://rstudio.com/products/rstudio/download/#download}. In addition to being a great and simple to use environment for editing code, \texttt{RStudio} makes it very easy to write and compile \texttt{Rmarkdown} documents: the format in which problem sets will be distributed. In addition to base \texttt{R}, we will be frequently using data management and processing tools found in the \href{https://www.tidyverse.org/}{tidyverse} set of packages along with basic graphics and visualization using \href{https://ggplot2.tidyverse.org/}{ggplot2}. 
+
+The course will also introduce the \texttt{Stan} language and software for specifying and estimating Bayesian models. Stan is written in C but has bindings for a variety of programming languages. We will use two interfaces for \texttt{Stan} in R: \texttt{RStan} and \texttt{brms}. 
+
+\section*{Schedule}
+
+A schedule of topics and readings is provided below. Each week will cover a single topic or group of topics. You should treat the readings as a reference and as a more detailed exposition of the topics discussed in lecture. Consult the readings when you want to know more or want a slightly different approach to explaining a particular topic.
+
+\subsection{Week 1: Introduction to Likelihood Inference (January 3)}
+
+\begin{itemize}
+  \item What are statistical models good for?
+  \item What is a ``parametric" model?
+  \item The likelihood function 
+  \item Maximum likelihood estimation
+\end{itemize}
+
+\subsubsection*{Readings}
+
+\begin{itemize}
+\item \textbf{Review:} ``Regression and Other Stories" - Chapters 1-7
+\end{itemize}
+
+\textbf{Problem Set 1 Assigned January 5, Due January 17}
+
+\subsection{Week 2: Generalized Linear Models (January 10)}
+
+\begin{itemize}
+\item Properties of maximum likelihood estimators
+\item Binary outcome models, Event count models, Duration models
+\end{itemize}
+
+\subsubsection*{Readings}
+
+\begin{itemize}
+\item ``Regression and Other Stories`` - Chapters 13-14
+\item Box-Steffensmeier, J. M., \& Jones, B. S. (1997). Time is of the essence: Event history models in political science. \textit{American Journal of Political Science}, 1414-1461.
+\item Wooldridge, J. M. (1999). Chapter 8: ``Quasi-likelihood methods for count data." In \textit{Handbook of applied econometrics}, 2, 35-406.
+\end{itemize}
+
+
+\subsection{Week 3: Bayesian Inference (January 17)}
+
+\begin{itemize}
+\item Principles of posterior inference
+\item How to write a bayesian model
+\item Quantities of interest: Posterior Mode, Posterior Mean, Credible Intervals
+\item Estimation and inference via Markov Chain Monte Carlo
+\end{itemize}
+
+\subsubsection*{Readings}
+
+\begin{itemize}
+\item ``Regression and Other Stories``: Chapter 9
+\item ``Bayesian Data Analysis`` Chapters 10-11
+\end{itemize}
+
+
+\textbf{Problem Set 2 Assigned January 19, Due January 31}
+
+\subsection{Week 4: Multilevel regression models (January 24)}
+
+\begin{itemize}
+\item ``Hierarchical" regression models -- random slopes/random intercept models
+\item Estimation via MCMC in \texttt{Stan}
+\item Interpreting and analyzing results
+\end{itemize}
+
+\subsubsection*{Readings}
+
+\begin{itemize}
+\item TBA
+\end{itemize}
+
+
+\subsection{Week 5: Working with survey data (January 31)}
+
+\begin{itemize}
+\item How to approach population inference from non-probability samples: constructing and using weights
+\item Multilevel regression + post-stratification
+\end{itemize}
+
+\subsubsection*{Readings}
+
+\begin{itemize}
+\item TBA
+\end{itemize}
+
+\textbf{Paper Topic Memo Due: February 2nd}
+
+\subsection{Week 6: Mixture Models and the EM Algorithm (February 7)}
+
+\begin{itemize}
+\item Exploratory data analysis and clustering models
+\item MLE and MAP estimation via the ``Expectation-Maximization" algorithm
+\end{itemize}
+
+\subsubsection*{Readings}
+
+\begin{itemize}
+\item TBA
+\end{itemize}
+
+\subsection{Week 7: Item Response Theory and Ideal Point Models (February 14)}
+
+\begin{itemize}
+\item Latent variable models from a bayesian perspective
+\item ``Ideal point" models for voting
+\item Extensions to models of networks 
+\end{itemize}
+
+\subsubsection*{Readings}
+
+\begin{itemize}
+\item TBA
+\end{itemize}
+
+\textbf{Problem Set 3 Assigned February 16, Due February 28}
+
+\subsection{Week 8: Regularization and Model Selection (February 21)}
+
+\begin{itemize}
+\item Variable selection and penalized regression (Ridge, LASSO) 
+\item Cross-fitting and out-of-sample validation
+\end{itemize}
+
+\subsubsection*{Readings}
+
+\begin{itemize}
+\item TBA
+\end{itemize}
+
+\subsection{Week 9: Research Presentations + Conclusion (February 28)}
+
+\textbf{Final Paper Due March 9}
+
+\section*{Assignment Schedule}
+
+\begin{itemize}
+\item Problem Set 1: Assigned January 5, Due January 17
+\item Problem Set 2: Assigned January 19, Due January 31
+\item \textbf{Paper Topic Memo Due}: February 2
+\item Problem Set 3: Assigned February 16, Due February 28
+\item \textbf{Research Presentation}: February 28/March 2
+\item \textbf{Final Paper Due}: March 9
+\end{itemize}
+
+\section*{Acknowledgments}
+
+This course is indebted to the many wonderful and generous scholars who have developed causal inference curricula in political science departments throughout the world and who have made their course materials available to the public. This course in particular has been heavily inspired by Gov 2001 and Gov 2003 at Harvard University as well as Quant III at MIT. In particular, I thank Matthew Blackwell, Brandon Stewart, Erin Hartman, Molly Roberts, Kosuke Imai, Teppei Yamamoto, Jens Hainmueller, Adam Glynn, Gary King, Justin Grimmer, and In Song Kim whose lecture notes and syllabi have been immensely valuable in the creation of this course. 
+
+
+\end{document}
+ 
