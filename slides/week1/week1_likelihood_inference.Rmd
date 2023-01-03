@@ -17,6 +17,13 @@ $$
   \require{cancel}
   \DeclareMathOperator*{\argmin}{arg\,min}
 $$
+```{r, echo = F, message=F, warnings=F}
+library(tidyverse)
+library(haven)
+library(estimatr)
+library(knitr)
+options(digits=3)
+```
 ---
 
 # Course Overview
@@ -25,7 +32,7 @@ $$
 --
 
 - Logistics:
-  - Lectures T/Th - 2:00am - 12:20pm; Sections F - 10:30 - 11:20am
+  - Lectures T/Th - 2:00am - 12:20pm;
   - 3 Problem Sets (~ 2 weeks)
   - Final paper project (8-12 pages)
   - My office hours: Tuesdays 4pm-6pm (Pick 328)
@@ -339,13 +346,13 @@ $$\epsilon | \mathbf{X} \sim \mathcal{N}(0, \sigma^2)$$
 --
 
 - But what if we wanted to make further probabilistic statements about other quantities beyond $\beta$?
-  - (e.g.) Can we provide a distribution for $Y_{n+1}$, the "next" observation given $X_{n}$?
+  - (e.g.) Can we provide a distribution for $Y_{n+1}$, the "next" observation given $X_{n+1}$?
   - If we're willing to make more assumptions about the data-generating process, we can do a lot more!
 --
 
 - **Statistical models** specify the data-generating process in terms of *systematic* and *stochastic* components.
-  - *Systematic* elements are functions known constants and unknown *parameters*
-  - *Stochastic* elements are draws from probability distributions
+  - **Systematic** elements are functions known constants and unknown *parameters*
+  - **Stochastic** elements are draws from probability distributions
 --
 
 - We will be primarily working with *parametric* models
@@ -399,7 +406,66 @@ $$\theta_i = g(X_i, \beta)$$
 $$\theta_i = g(X_i^{\prime}\beta)$$
 
 ---
-  
-  
+
+# Types of distributions
+
+- **Normal**
+
+```{r, echo=F, fig.width=5, fig.height = 3, fig.align="center"}
+norm_curve <- ggplot() + xlim(-5, 5) + geom_function(fun=dnorm) + theme_bw() + ylab("Density") + xlab("Value")
+norm_curve
+```
+
+--
+- Continuous on an unbounded support $(-\infty, \infty)$
+- Two parameters: Mean $\mu$ and Variance $\sigma^2$
+--
+
+- Probability Density Function (PDF)
+
+$$f_N(x;\mu, \sigma) = \frac{1}{\sigma\sqrt{2\pi}} \exp\left\{- \frac{1}{2}\left(\frac{x - \mu}{\sigma}\right) \right\}$$
+
+---
+
+# Types of distributions
+
+- **Poisson**
+
+```{r, echo=F, fig.width=5, fig.height = 3, fig.align="center"}
+pois_curve <- data.frame(x=0:10) %>% ggplot(aes(x=x)) + xlim(0, 10) + geom_point(aes(y=dpois(x, lambda=1))) + theme_bw() + ylab("Probability") + xlab("Value")
+pois_curve
+```
+
+--
+- Discrete, defined on the support of the natural numbers (positive integers + zero)
+- Single parameter: Mean and Variance $\lambda$ 
 
 
+- Probability Density Function (PDF)
+
+$$f(x; \lambda) = \frac{\lambda^x\exp\{-\lambda\}}{x!}$$
+---
+
+# Types of distributions
+
+- **Binomial**
+
+```{r, echo=F, fig.width=5, fig.height = 3, fig.align="center"}
+binom_curve <- data.frame(x=0:10) %>% ggplot(aes(x=x)) + xlim(0, 10) + geom_point(aes(y=dbinom(x, size=10, prob = .3))) + theme_bw() + ylab("Probability") + xlab("Value")
+binom_curve
+```
+
+- Discrete, defined on the support of integers from $\{0, 1, 2, \dotsc, n\}$ (model the sum of repeated i.i.d. coin flips.)
+- Two parameters: $p$ probability of success in $n$ trials
+  - Special case where $n=1$ trials is typically called the "Bernoulli"
+- Probability Density Function (PDF)
+
+$$f(x; p, n) = {n \choose x} p^x(1-p)^{n-x}$$
+
+---
+
+class: title-slide
+
+# Likelihood inference
+
+---
