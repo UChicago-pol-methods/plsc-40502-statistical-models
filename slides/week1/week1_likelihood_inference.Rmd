@@ -17,6 +17,7 @@ $$
   \require{cancel}
   \DeclareMathOperator*{\argmin}{arg\,min}
 $$
+  
 ```{r, echo = F, message=F, warnings=F}
 library(tidyverse)
 library(haven)
@@ -52,6 +53,10 @@ options(digits=3)
   - Teach you how to program and implement estimators by yourself!
 
 ---
+
+$$
+  \DeclareMathOperator*{\argmax}{arg\,max}
+$$
 
 # Course workflow 
 
@@ -468,4 +473,393 @@ class: title-slide
 
 # Likelihood inference
 
+---
+
+# Learning about the unknown
+
+- Suppose that I want to learn about an unobserved parameter from a sample of observations.
+  - I *assume* a particular statistical model for the data
+  - **Example**: I want to know the level of support for then-President Donald Trump in Wisconsin in 2020 using the 2020 CES
+--
+
+- **Frequentist** approach
+  - Unobserved parameters are **fixed constants**
+  - Data are **random variables**
+--
+
+- We want to construct an **estimator** that is a *function* of the data and which has desirable properties
+  - **Unbiasedness**: The *expected value* of the estimator is equal to the target parameter
+  - **Consistency**: As our sample size gets larger, the estimator converges (in probability) to the target parameter.
+  - **Asymptotic normality**: In large samples, the distribution of our estimator is normal (ideally with a variance we can estimate as well!)
+--
+
+- Can we come up with a *generic* framework that yields a "good" estimator for a large class of statistical models?
+
+---
+
+# The Likelihood Function
+
+- Consider data $\mathbf{y} = \{y_1, y_2, \dotsc, y_n\}$ which we assume comes from a known distribution with density $f(\mathbf{y} | \theta)$ with unknown parameter $\theta$
+  - $f()$ could be Bernoulli, Normal, Poisson, Gamma, Beta, etc... -- in this setting it is a *known* distribution
+  - $\theta$ is an *unknown* parameter that lies in some space $\Theta$ of possible values.
+--
+
+- The **likelihood function** is a function of $\theta$ that is evaluated at the observed values of $\mathbf{y}$
+
+$$\mathcal{L}(\theta| \mathbf{y}) = f(\mathbf{y} | \theta)$$
+--
+
+- Given some *input* $\theta$, the likelihood function returns the density of the observed data evaluated at that value.
+
+--
+
+- The likelihood function is **not** a probability density
+  - a pdf is a function that takes $x$ as an input
+  - a likelihood is a function that takes $\theta$ as an input
+  
+---
+
+# The Likelihood Function
+
+- The likelihood function is **not** $f(\theta | \mathbf{y})$
+  - That statement doesn't even make sense in a frequentist framework -- parameters are constant
+--
+
+- Even when we (later) move to a *Bayesian* framework $f(\theta | \mathbf{y}) \neq f(\mathbf{y} | \theta)$
+--
+
+- Remember Bayes' Rule:
+  
+$$f(\theta | \mathbf{y}) = \frac{f(\mathbf{y} | \theta)}{f(\mathbf{y})} \times f(\theta)$$
+--
+
+- Or alternatively, since $f(\mathbf{y})$ is just a normalizing constant, you'll see this written as:
+  
+$$\underbrace{f(\theta | \mathbf{y})}_{\text{posterior}} \propto \underbrace{f(\mathbf{y}|\theta)}_{\text{likelihood}} \times \underbrace{f(\theta)}_{\text{prior}}$$
+
+---
+
+# The Likelihood Function
+
+- We often make the assumption that our data are **independently and identically distributed**
+  - $y_i \underset{{\text{i.i.d}}}{\sim} f(y_i | \theta)$
+--
+
+- This allows us to factor the likelihood 
+
+$$\mathcal{L}(\theta|\mathbf{y}) = f(\mathbf{y} | \theta) = \prod_{i=1}^n f(y_i | \theta)$$
+--
+
+- Since our eventual goal will be to find an *optimum* of the likelihood, we can apply any monotonic function to it since that preserves maxima/minima.
+  - The main one we'll apply is the **logarithm**
+  - Why? Because logs turn annoying-to-work-with products into easier-to-work-with sums!
+--
+
+- The log-likelihood is typically denoted $\ell(\theta| \mathbf{y})$
+
+$$\ell(\theta|\mathbf{y}) = \log f(\mathbf{y}|\theta) = \sum_{i=1}^n \log f(y_i | \theta)$$
+---
+
+# MLE
+
+- We want to come up with an estimator $\hat{\theta}$ for the parameter $\theta$
+  - $\hat{\theta}$ is a function of the data (like a sample mean or OLS coefficient)
+  - Is there a principled way to pick $\hat{\theta}$ that has provably "good" properties across a wide variety of models?
+--
+
+- The Maximum Likelihood Estimator (MLE) $\hat{\theta}$ is defined as the value of $\theta$ that yields the optimum value of the likelihood function
+
+$$\hat{\theta} = \argmax_\theta \ \log f(\mathbf{y}|\theta)$$
+--
+
+- The MLE has some desirable properties:
+  - Under some regularity conditions, the MLE $\hat{\theta}$ is consistent for the true parameter $\theta$
+  - It's asymptotically normal: $\sqrt{n}(\hat{\theta}_n - \theta) \rightarrow \text{Normal}(0, \frac{1}{\mathcal{I}(\theta)})$
+  - It's asymptotically efficient: It's variance approaches the Cramer-Rao lower-bound $\frac{1}{n\mathcal{I}(\theta)}$
+--
+  
+---
+
+# Score
+
+- Before illustrating consistency, we need to define some additional functions of the log-likelihood.
+- The first is the **score** or the gradient of $\ell(\theta|\mathbf{y})$ with respect to $\theta$
+
+$$\mathbf{S} = \frac{\partial}{\partial\theta} \log f(\mathbf{y}|\theta)$$
+
+--
+
+- With i.i.d. data, you'll often see the score written in terms of the score for an individual observation $i$
+
+$$\mathbf{S}_i = \frac{\partial}{\partial\theta} \log f(y_i|\theta)$$
+--
+
+- At the value of the true parameter $\theta_0$, the expected value of the score is $0$ (under regularity conditions)
+
+$$ \mathbb{E}\bigg[\frac{\partial}{\partial\theta} \log f(y_i|\theta_0)\bigg] = \frac{\partial}{\partial\theta} \mathbb{E}[\log f(y_i|\theta_0)] = 0$$
+
+---
+
+class: title-slide
+
+# Example
+
+---
+
+# Example: Bernoulli
+
+- Suppose I was interested in learning about the proportion of residents in Wisconsin who approved of then-President Donald Trump's performance in 2020.
+  - I observe a sample of $n$ respondents and observe an approve $(y_i = 1)$ or disapprove $(y_i = 0)$ response.
+  - Ignore, for this example, the sample weights and assume we have a true simple random sample from the target populations.
+--
+
+- The data generating process:
+  - *Stochastic*: $y_i \sim \text{Bernoulli}(\pi)$
+  - *Systematic*: $\pi \in (0, 1)$
+--
+
+- Let's derive the (log)likelihood!
+
+---
+
+# Example: Bernoulli
+
+- Under our assumption of i.i.d. observations:
+
+$$\mathcal{L}(\pi | \mathbf{y}) = f(\mathbf{y} | \pi) = \prod_{i=1}^n f(y_i | \pi)$$
+--
+
+- The log-likelihood is
+
+$$\ell(\pi | \mathbf{y}) = \sum_{i=1}^n \log f(y_i | \pi)$$
+--
+
+- Since $y_i$ is Bernoulli, the PMF is:
+
+$$f(y_i | \pi) = \pi^{y_i}(1-\pi)^{1-y_i}$$
+--
+
+- Plugging back into the log-likelihood
+
+$$\ell(\pi | \mathbf{y}) = \sum_{i=1}^n \log \bigg(\pi^{y_i}(1-\pi)^{1-y_i}\bigg)$$
+
+---
+
+# Example: Bernoulli
+
+- Log of the product is the sum of the logs
+
+$$\ell(\pi | \mathbf{y}) = \sum_{i=1}^n \log \bigg(\pi^{y_i}\bigg) + \log\bigg((1-\pi)^{1-y_i}\bigg)$$
+--
+
+- Properties of logs: $\log(a^b) = b\log(a)$
+
+$$\ell(\pi | \mathbf{y}) = \sum_{i=1}^n y_i \log (\pi) + (1-y_i)\log(1-\pi)$$
+--
+
+- We'll simplify this further later, but let's take a look at the shape of this likelihood function w.r.t. its input $\pi$
+
+---
+
+# Example: Bernoulli
+
+- Read in the data
+
+```{r, warning=F, message=F}
+approval <- read_csv("data/cces2020_trump_approval_WI_TX.csv")
+approval <- approval %>% filter(!is.na(trumpapprove)) # Drop missing
+approval_WI <- approval %>% filter(inputstate == 55) # Subset down to Wisconsin
+approval_TX <- approval %>% filter(inputstate == 48) # Also get TX for comparison
+```
+--
+
+- Write the likelihood function in code
+
+```{r}
+bern_lik <- function(pi, y){
+  return(sum(y*log(pi) + (1-y)*log(1-pi)))
+}
+```
+--
+
+- Quick summary of the data
+
+```{r}
+table(approval_WI$trumpapprove)
+```
+
+---
+
+# Visualizing the likelihood
+
+- For Wisconsin
+
+```{r, echo=F, fig.width=8, fig.height=6, fig.align="center"}
+data.frame(x=seq(0.01,.99,by=.01)) %>% mutate(loglik=map_dbl(x, bern_lik, y=approval_WI$trumpapprove)) %>% 
+ggplot(aes(x=x,y=loglik)) + xlim(0,1) + geom_line(lwd=2) + theme_bw() + xlab(expression(pi)) + ylab("log-likelihood")
+```
+
+---
+
+# Visualizing the likelihood
+
+- For Wisconsin and Texas
+
+```{r, echo=F, fig.width=7, fig.height=6, fig.align="center" }
+data.frame(x=seq(0.01,.99,by=.01)) %>% mutate(loglik=map_dbl(x, bern_lik, y=approval_WI$trumpapprove)) %>% mutate(loglik2=map_dbl(x, bern_lik, y=approval_TX$trumpapprove)) %>%
+ggplot(aes(x=x,y=loglik)) + xlim(0,1) + geom_line(lwd=2) + geom_line(aes(y=loglik2),lwd=2, col='red') + theme_bw() + xlab(expression(pi)) + ylab("log-likelihood") + annotate("text", x=.4, y=-4000, label = "TX", col="red") + annotate("text", x=.4, y=-1500, label = "WI")
+```
+
+---
+
+# Numerical optimization
+
+- Often the MLEs can be obtained via closed-form solutions, but in most applications, the answer has to be obtained numerically.
+- R has a built-in numerical optimizer: `optim` that implements some standard algorithms
+  - But *tons* of other packages: https://cran.r-project.org/web/views/Optimization.html
+--
+
+- Let's use `optim()` to calculate the MLE
+
+```{r, warning = F}
+# Pass our likelihood through to the optimizer
+mle_wi_optim <- optim(.5, fn=bern_lik, 
+                      y=approval_WI$trumpapprove,
+                      method = "BFGS",
+                      control=list(fnscale=-1),
+                      hessian=T)
+```
+
+---
+
+# Numerical optimization
+
+- What's the output of `optim()`?
+
+```{r}
+mle_wi_optim
+```
+
+---
+
+# Numerical optimization
+
+- Our MLE point estimate is:
+
+```{r}
+point_mle <- mle_wi_optim$par
+point_mle
+```
+
+--
+
+- A consistent estimator of the asymptotic variance is the inverse of the negative hessian
+
+```{r}
+var_mle <- solve(-mle_wi_optim$hessian)
+sqrt(var_mle) # Standard error
+```
+
+--
+
+- So our asymptotic 95% CI is
+
+```{r}
+c(point_mle - abs(qnorm(.025))*sqrt(var_mle), 
+  point_mle + abs(qnorm(.025))*sqrt(var_mle))
+```
+
+---
+
+# Analytical optimization
+
+- The Bernoulli case is pretty simple, so let's try to find an analytical expression for the MLE. We left off at
+
+$$\ell(\pi | \mathbf{y}) = \sum_{i=1}^n y_i \log (\pi) + (1-y_i)\log(1-\pi)$$
+--
+
+- To find the optimum, we first take the partial derivative with respect to $\pi$ and set it equal to zero
+
+$$\frac{\partial}{\partial\pi}\ell(\pi | \mathbf{y}) = \frac{\partial}{\partial\pi}\sum_{i=1}^n y_i \log (\pi) + (1-y_i)\log(1-\pi)$$
+--
+
+- Derivatives and sums
+
+$$\frac{\partial}{\partial\pi}\ell(\pi | \mathbf{y}) = \sum_{i=1}^n \left[\frac{\partial}{\partial\pi} y_i \log (\pi)\right] + \left[\frac{\partial}{\partial\pi}(1-y_i)\log(1-\pi)\right]$$
+
+---
+
+# Analytical optimization
+
+- Chain rule and product rules
+
+$$\frac{\partial}{\partial\pi}\ell(\pi | \mathbf{y}) = \sum_{i=1}^n \frac{y_i}{\pi} - \frac{1-y_i}{1-\pi}$$
+--
+
+- Split into 3 terms and pull out constants
+
+$$\frac{\partial}{\partial\pi}\ell(\pi | \mathbf{y}) = \frac{1}{\pi}\sum_{i=1}^n y_i + \frac{1}{1-\pi}\sum_{i=1}^n y_i - \frac{n}{1-\pi}$$
+--
+
+- Set equal to $0$ and solve for $\pi$
+
+$$0 = \frac{1}{\hat{\pi}}\sum_{i=1}^n y_i + \frac{1}{1-\hat{\pi}}\sum_{i=1}^n y_i - \frac{n}{1-\hat{\pi}}$$
+
+---
+
+# Analytical optimization
+
+- Rearrange terms
+
+$$\frac{n}{1-\hat{\pi}} = \frac{1}{\hat{\pi}}\sum_{i=1}^n y_i + \frac{1}{1-\hat{\pi}}\sum_{i=1}^n y_i$$
+--
+
+- Multiply through by $1-\hat{\pi}$
+
+$$n = \frac{1-\hat{\pi}}{\hat{\pi}}\sum_{i=1}^n y_i + \sum_{i=1}^n y_i$$
+--
+
+- Cancel terms
+
+$$n = \frac{1}{\hat{\pi}}\sum_{i=1}^n y_i$$
+
+---
+
+# Analytical optimization
+
+- Divide by $n$, multiply by $\hat{\pi}$
+
+$$\hat{\pi} = \frac{1}{n} \sum_{i=1}^n y_i$$
+
+--
+
+- Check that the second derivative is negative
+   - Here it's strictly negative over the domain of $\pi$
+
+$$\frac{\partial^2}{\partial\pi^2}\ell(\pi | \mathbf{y}) = \sum_{i=1}^n - \frac{y_i}{\pi^2} - \frac{1-y_i}{(1-\pi)^2}$$
+--
+
+- All that work and it turns out the MLE is just the **sample mean**!
+  - Won't always be the case, but here the MLE is also *unbiased* because of what we know about the sample mean.
+  
+---
+
+# Conclusion
+
+- **Statistical models**
+  - Describe the data-generating process in terms of *systematic* and *stochastic* components
+  - In a parametric model, we assume the data $\mathbf{y}$ come from a known *distribution* with unknown parameters $\theta$
+--
+
+- **Likelihood**
+  - A function of $\theta$ evaluated at the observed data $\mathbf{y}$ equal to $f(\mathbf{y}|\theta)$
+  - How "likely" are my observed results in a world where the true DGP parameter were $\theta$.
+  - Not $f(\theta|\mathbf{y})$. That quantity only makes sense in the Bayesian context and requires us to formulate a prior $f(\theta)$
+--
+
+- **Maximum Likelihood Estimator**
+  - A *technique* to come up with a **good** estimator in any case where we can write down a (well-behaved) likelihood function for a DGP
+  - Still a "function" of the data, but that function has useful properties:
+    - Consistency, Asymptotic Normality, Asymptotic Efficiency
+    
 ---
