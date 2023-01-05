@@ -576,6 +576,7 @@ $$\hat{\theta} = \argmax_\theta \ \log f(\mathbf{y}|\theta)$$
   - Under some regularity conditions, the MLE $\hat{\theta}$ is consistent for the true parameter $\theta$
   - It's asymptotically normal: $\sqrt{n}(\hat{\theta}_n - \theta) \rightarrow \text{Normal}(0, \frac{1}{\mathcal{I}(\theta)})$
   - It's asymptotically efficient: It's variance approaches the Cramer-Rao lower-bound $\frac{1}{n\mathcal{I}(\theta)}$
+  - It's invariant to reparametarization: If $\hat{\theta}$ is an MLE for $\theta$, then $g(\hat{\theta})$ is an MLE for $g(\theta)$
 --
   
 ---
@@ -597,6 +598,95 @@ $$\mathbf{S}_i = \frac{\partial}{\partial\theta} \log f(y_i|\theta)$$
 - At the value of the true parameter $\theta_0$, the expected value of the score is $0$ (under regularity conditions)
 
 $$ \mathbb{E}\bigg[\frac{\partial}{\partial\theta} \log f(y_i|\theta_0)\bigg] = \frac{\partial}{\partial\theta} \mathbb{E}[\log f(y_i|\theta_0)] = 0$$
+
+---
+
+# Consistency
+
+- With this definition of the score, we can show consistency of the MLE under i.i.d. observations.
+- By the weak law of large numbers
+
+$$\frac{1}{n} \sum_{i=1}^n \log f(y_i | \theta) \underset{p}{\rightarrow} \mathbb{E}[\log f(y_i | \theta)]$$
+--
+
+- The MLE is an optimizer of the left-hand side.
+  - Therefore it converges in probability to the optimizer of the right-hand side
+--
+
+- And we just showed that the score is $0$ at the true value of $\theta$, denoted $\theta_0$
+  - Therefore $\theta_0$ is an extremum of the right-hand side (under a few additional regularity conditions)
+--
+
+- Therefore the MLE $\hat{\theta}$ is consistent for the true value $\theta_0$
+  
+--
+
+---
+
+# Consistency
+
+- There are two important conditions for consistency that can be violated in practice
+- **Identifiability**
+  - No "plateaus" in the log-likelihood.
+  - Two different values of $\theta$ can't both maximize the log-likelihood
+  
+$$f(\mathbf{y}|\theta) \neq f(\mathbf{y} | \theta_0) \ \forall \ \theta \neq \theta_0$$ 
+  
+--
+
+- **Fixed parameter space**
+  - The dimensionality of $\theta$ stays fixed and does not depend on $n$
+  - Violated (e.g.) in ideal point models (new legislators mean new ideal points)
+---
+
+# Information
+
+- Having established consistency, we're interested in understanding the variance and distribution (asymptotically) of $\hat{\theta}$ 
+- To do this, we need to define a quantity called the **information**: $\mathcal{I}_n$
+- This is equivalent to the variance of the score at its optimum
+
+$$\mathcal{I}_n = \mathbb{E}\left[\left(\frac{\partial}{\partial\theta} \log f(\mathbf{y}|\theta_0)\right)^2\right]$$
+--
+
+- We can show (under some more regularity conditions) that this is equivalent to the negative expectation of the second-order partial derivative (Hessian) of the log-likelihood
+
+$$\mathcal{I}_n = -\mathbb{E}\left[\frac{\partial^2}{\partial\theta^2} \log f(\mathbf{y}|\theta_0)\right]$$
+- **Intuitively**: Captures the curvature of the log-likelihood at its maximum
+
+---
+
+# Information
+
+- You'll sometimes see the information written in terms of the information from a single observation
+
+$$\mathcal{I} =  -\mathbb{E}\left[\frac{\partial^2}{\partial\theta^2} \log f(y_i|\theta_0)\right]$$
+
+- Under our i.i.d. assumption, we can write
+
+$$\mathcal{I_n} = n\mathcal{I}$$
+
+--
+
+- This matters a bit for how we write/show consistency of the MLE
+  
+---
+
+# Information
+
+- Under our i.i.d. assumption (+ regularity conditions), we can show not only consistency but convergence in distribution to a normal
+
+$$\sqrt{n}(\hat{\theta} - \theta) \underset{d}{\rightarrow} \text{Normal}(0, \mathcal{I}^{-1})$$
+
+--
+
+- So in large samples, a good approximation of the variance of $\hat{\theta}$ is $\mathcal{I}_n^{-1}$
+  - An additional result: The inverse of the information is the lowest possible variance of any unbiased estimator (**Cramér-Rao lower bound**) 
+  - MLE achieves this bound asymptotically
+
+--
+
+- How do we do inference then? Same way as before -- plug in a consistent estimator of $\mathcal{I}_n^{-1}$.
+  - Calculate the hessian of the log-likelihood at the MLE and take the inverse of its negative.
 
 ---
 
