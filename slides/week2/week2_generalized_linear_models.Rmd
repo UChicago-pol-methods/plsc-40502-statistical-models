@@ -1,0 +1,52 @@
+---
+title: "Week 2: Generalized Linear Models"
+subtitle: "PLSC 40502 - Statistical Models"
+# author: "Anton Strezhnev"
+output: 
+  xaringan::moon_reader:
+    self_contained: true
+    css: [default, uchicago_pol_meth.css]
+    nature:
+      highlightLines: true
+      
+---
+class: title-slide
+
+# Welcome!
+$$
+  \require{cancel}
+  \DeclareMathOperator*{\argmin}{arg\,min}
+$$
+  
+```{r, echo = F, message=F, warnings=F}
+library(tidyverse)
+library(haven)
+library(estimatr)
+library(knitr)
+options(digits=3)
+```
+---
+
+# Previously
+
+- **Likelihood**: $\mathcal{L}(\theta| \mathbf{Y}) \propto f(\mathbf{Y}| \theta)$
+  - Function of $\theta$ (not itself a probability density)
+  - Comparisons of likelihoods across different parameters capture notions of model "fit"
+  
+$$\lambda(\theta_1, \theta_2) = \frac{\mathcal{L}(\theta_1 | \mathbf{Y})}{\mathcal{L}(\theta_2 | \mathbf{Y})}$$
+  
+  - Does $\theta_1$ or $\theta_2$ make the data "more likely"?
+--
+
+- **Frequentist** inference: Use the likelihood to find a "good" estimator for $\theta$: the MLE $\hat{\theta}$
+  - $\hat{\theta}$ is consistent for $\theta$
+  - It's asymptotically normal
+  - It's (asymptotic) variance is the inverse Fisher Information
+  
+---
+
+# This week
+
+- **Generalized linear models**
+  - What happens when $\mathbb{E}[Y_i|X_i] \neq X_i^{\prime}\beta$?
+  - Can we retain the linear form but relate it to a function of the CEF?
