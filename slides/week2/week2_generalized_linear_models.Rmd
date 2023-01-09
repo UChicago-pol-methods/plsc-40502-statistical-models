@@ -12,7 +12,7 @@ output:
 ---
 class: title-slide
 
-# Welcome!
+# Review
 $$
   \require{cancel}
   \DeclareMathOperator*{\argmin}{arg\,min}
@@ -50,3 +50,62 @@ $$\lambda(\theta_1, \theta_2) = \frac{\mathcal{L}(\theta_1 | \mathbf{Y})}{\mathc
 - **Generalized linear models**
   - What happens when $\mathbb{E}[Y_i|X_i] \neq X_i^{\prime}\beta$?
   - Can we retain the linear form but relate it to a function of the CEF?
+--
+
+- **Types of GLMs**
+  - Binary outcome models (e.g. logistic)
+  - Ordinal/Multinomial outcome models 
+  - Count outcome models (e.g. Poisson)
+  - Duration models (e.g. exponential)
+--
+
+- **Robust** inference
+  - What happens when the GLM outcome distributions are wrong?
+  - Can we still do valid inference for the CEF?
+
+---
+class: title-slide
+
+# Intro to GLMs
+
+---
+
+# Motivation: Propensity Scores
+
+- Researchers wanting to estimate causal effects from observational designs often use a *weighting* estimator to account for non-random treatment assignment.
+  - Observe treatment $D_i$, confounders $X_i$
+  - Need to estimate $Pr(D_i = 1 | X_i)$ to construct "inverse propensity of treatment weights"
+--
+
+- **Example**: *Keriakes et. al. (2000)* "Abciximab provides cost-effective survival advantage in high-volume interventional practice"
+  - Abciximab, an anti-clotting drug, is often used during certain types of heart surgery to reduce bleeding risk.
+  - Keriakes et. al. (2000) look at 1472 surgeries in Ohio Heart Health Center
+  - Abciximab was administered *non-randomly* -- some types of patients more likely to receive the drug than others
+--
+
+- **Key problem** - With many continuous covariates, hard to estimate $Pr(D_i = 1 | X_i)$ non-parametrically
+  - One solution: Assume a parametric *model* for $D_i$ 
+
+---
+
+# Generalized Linear Models
+
+- Generalized linear models (GLMs) have three components:
+  1. A parametric distribution on $Y_i|X_i$ ("stochastic component")
+  2. A linear predictor: $\eta_i = X_i^{\prime}\beta = \beta_0 + \beta_1X_{i1} + \beta_2X_{i2} + \dotsc \beta_kX_{ik}$ ("systematic component")
+  3. A link function $g()$ applied to the CEF $E[Y_i|X_i]$ that yields the linear predictor
+  
+  $$g(E[Y_i | X_i]) = \eta_i$$
+--
+
+  Alternatively, we can write the CEF in terms of the "inverse-link" $g^{-1}()$ applied to the linear predictor
+  
+  $$E[Y_i | X_i] = g^{-1}(\eta_i)$$
+---
+
+# Generalized Linear Models
+
+- The types of probability distributions permitted on $Y_i$ are quite general: the **exponential family**
+  - This contains the normal as well as many other 
+
+- 
