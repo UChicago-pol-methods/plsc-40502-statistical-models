@@ -29,17 +29,20 @@ options(digits=3)
 
 # Previously
 
+$$
+  \DeclareMathOperator*{\argmax}{arg\,max}
+$$
+
 - **Likelihood**: $\mathcal{L}(\theta| \mathbf{Y}) \propto f(\mathbf{Y}| \theta)$
   - Function of $\theta$ (not itself a probability density)
   - Comparisons of likelihoods across different parameters capture notions of model "fit"
   
 $$\lambda(\theta_1, \theta_2) = \frac{\mathcal{L}(\theta_1 | \mathbf{Y})}{\mathcal{L}(\theta_2 | \mathbf{Y})}$$
-  
-  - Does $\theta_1$ or $\theta_2$ make the data "more likely"?
+
 --
 
-- **Frequentist** inference: Use the likelihood to find a "good" estimator for $\theta$: the MLE $\hat{\theta}$
-  - $\hat{\theta}$ is consistent for $\theta$
+- **Frequentist** inference: Use the likelihood to find a "good" estimator for $\theta_0$: the MLE $\hat{\theta}$
+  - $\hat{\theta}$ is consistent for $\theta_0$
   - It's asymptotically normal
   - It's (asymptotic) variance is the inverse Fisher Information
   
@@ -77,7 +80,7 @@ class: title-slide
   - Need to estimate $Pr(D_i = 1 | X_i)$ to construct "inverse propensity of treatment weights"
 --
 
-- **Example**: *Keriakes et. al. (2000)* "Abciximab provides cost-effective survival advantage in high-volume interventional practice"
+- **Example**: .maroon[Keriakes et. al. (2000)] *"Abciximab provides cost-effective survival advantage in high-volume interventional practice"*
   - Abciximab, an anti-clotting drug, is often used during certain types of heart surgery to reduce bleeding risk.
   - Keriakes et. al. (2000) look at 1472 surgeries in Ohio Heart Health Center
   - Abciximab was administered *non-randomly* -- some types of patients more likely to receive the drug than others
@@ -103,9 +106,524 @@ class: title-slide
   $$E[Y_i | X_i] = g^{-1}(\eta_i)$$
 ---
 
-# Generalized Linear Models
+# Exponential Family
 
 - The types of probability distributions permitted on $Y_i$ are quite general: the **exponential family**
-  - This contains the normal as well as many other 
+  - This contains the **normal** as well as many other common distributions like the bernoulli, Poisson, exponential, etc...
+--
 
-- 
+- Exponential family distributions have density functions of the form
+
+$$P(y|\theta) = h(x) \exp\bigg\{b(\theta) \cdot T(y) - A(\theta)\bigg\}$$
+where $h(x)$, $A(\theta)$, $\eta(\theta)$ and $T(y)$ are known functions
+
+--
+- The key intuition: exponential distributions factorize in a convenient way
+  - if $b(\theta) = \theta$, then the distribution is in "canonical" form
+  - $T(y)$ is a "sufficient statistic"
+
+---
+
+# Example: Bernoulli
+
+- Consider the bernoulli PMF
+
+$$P(y_i|\pi_i) = \pi_i^{y_i}(1-\pi_i)^{1-y_i}$$
+
+--
+
+- Take the log, then the exponent
+
+$$P(y_i|\pi_i) = \exp\bigg\{\log\bigg[\pi_i^{y_i}(1-\pi_i)^{1-y_i}\bigg]\bigg\}$$
+
+--
+
+- Properties of logs
+
+$$P(y_i|\pi_i) = \exp\bigg\{y_i\log(\pi_i) + (1-y_i)\log(1-\pi_i)\bigg\}$$
+
+---
+
+# Example: Bernoulli
+
+- Rearranging and using properties of logs again
+
+$$P(y_i|\pi_i) = \exp\bigg\{y_i\log\bigg(\frac{\pi_i}{1-\pi_i}\bigg) + \log(1-\pi_i)\bigg\}$$
+
+--
+
+- So our exponential form is
+  - $h(x) = 1$
+  - $T(y) = y_i$
+  - $A(\theta) = \log(1-\pi_i)$
+  - $b(\theta) = \log\bigg(\frac{\pi_i}{1-\pi_i}\bigg)$
+--
+
+- Critically, this is where we get a good link function
+  - The "canonical parameter" is $\log\bigg(\frac{\pi}{1-\pi}\bigg)$.
+  - The "canonical link" is the function that equates this parameter with the linear predictor $X_i^{\prime}\beta = \log\bigg(\frac{\pi_i}{1-\pi_i}\bigg)$
+  
+---
+
+# Logistic regression
+
+- The "logit" or "logistic" GLM models the **log-odds** of a binary outcome as a function of the linear predictor $X_i^{\prime}\beta$
+
+$$Y_i \underset{\text{i.i.d}}{\sim} \text{Bernoulli}(\pi_i)$$
+
+$$E[Y_i | X_i] = Pr(Y_i = 1 | X_i) = \pi_i$$
+
+$$\log\bigg(\frac{\pi}{1-\pi}\bigg) = X_i^{\prime}\beta$$
+--
+
+- Alternatively, this is written in terms of the "inverse-link" function (the logistic function) that relates $\pi_i$ to $g^{-1}(X_i^{\prime}\beta)$
+
+$$\pi_i = \frac{\exp(X_i^{\prime}\beta)}{1 + \exp(X_i^{\prime}\beta)} = \frac{1}{1 + \exp(-X_i^{\prime}\beta)}$$
+
+---
+
+# Inverse-link functions
+
+- The logistic function maps inputs on $\mathbb{R}$ to $(0, 1)$
+
+```{r, echo=F, fig.width=5, fig.height = 3, fig.align="center"}
+logistic <- function(x) 1/(1 + exp(-x))
+logistic_curve <- ggplot() + xlim(-5, 5) + ylim(0,1) + geom_function(fun=logistic) + theme_bw() + ylab(expression(pi)) + xlab(expression(paste("X",beta))) + geom_vline(xintercept=0, lty=2) + ggtitle("Logistic function")
+logistic_curve
+```
+
+- Another link is the "probit" whose inverse link is the Normal CDF
+
+```{r, echo=F, fig.width=5, fig.height = 3, fig.align="center"}
+normal_cdf <- ggplot() + xlim(-5, 5) + ylim(0,1) + geom_function(fun=pnorm) + theme_bw() + ylab(expression(pi)) + xlab(expression(paste("X",beta))) + geom_vline(xintercept=0, lty=2) + ggtitle("Normal CDF")
+normal_cdf
+```
+
+---
+
+# Inverse-link functions
+
+- When do we use probit vs. logit?
+  - Computational convenience!
+  - Probit has some good properties for Bayesian inference
+--
+
+- Can you tell the difference?
+
+```{r, echo=F, fig.width=6, fig.height = 4, fig.align="center"}
+normal_logit <- ggplot() + xlim(-5, 5) + ylim(0,1) + geom_function(fun=pnorm, col="dodgerblue") + geom_function(fun=logistic, lty=2, col="indianred") + theme_bw() + ylab(expression(pi)) + xlab(expression(paste("X",beta))) + geom_vline(xintercept=0, lty=2) + ggtitle("Logistic vs. Normal CDF")
+normal_logit
+```
+
+
+---
+
+# Estimation
+
+- We obtain an estimate of $\beta$, $\hat{\beta}$ using maximum likelihood.
+- Our MLE estimator is:
+
+$$\hat{\beta} = \argmax_\beta \ \log f(\mathbf{y} | \beta, \mathbf{X})$$
+--
+
+- Recall our score function is:
+
+$$S(\beta) = \nabla \log f(\mathbf{y} | \beta, \mathbf{X}) = \begin{bmatrix} \frac{\partial}{\partial \beta_0} \log f(\mathbf{y} | \beta, \mathbf{X}) \\
+\frac{\partial}{\partial \beta_1} \log f(\mathbf{y} | \beta, \mathbf{X}) \\
+\vdots \\
+\frac{\partial}{\partial \beta_k} \log f(\mathbf{y} | \beta, \mathbf{X})  \end{bmatrix}$$
+--
+
+- The likelihood is convex, so finding the maximum equates to solving for the value of $\beta$ that sets $S(\beta) = 0$
+  - A common numerical method is **Newton-Raphson**
+
+---
+
+# Newton-Raphson
+
+- An iterative algorithm starts at some initial guess $\hat{\beta}^{(0)}$ 
+- Let $\hat{\beta}^{(t)}$ denote the "current" value of $\hat{\beta}$ and $\hat{\beta}^{(t+1)}$ our update -- we keep iterating until convergence.
+--
+
+- Our goal is to solve for a zero of $S(\beta)$
+  - Let's do a first-order Taylor approximation around our current guess $S(\hat{\beta}^{(t)})$
+  
+$$S(\beta) \approx S(\hat{\beta}^{(t)}) + \nabla S(\hat{\beta}^{(t)}) \left(\beta - \hat{\beta}^{(t)}\right)$$
+--
+
+- What's $\nabla S(\hat{\beta}^{(t)})$? 
+  - It's the Jacobian of the gradient...or the matrix of second-order partial derivatives of the log-likelihood...or the Hessian!
+  - Denote it $\mathbf{H}(\hat{\beta}^{(t)})$
+
+---
+
+# Newton-Raphson
+
+- Our next value of $\hat{\beta}$ is the value of $\beta$ that sets the score equal to zero 
+
+$$0 =  S(\hat{\beta}^{(t)}) + \mathbf{H}(\hat{\beta}^{(t)}) \left(\hat{\beta}^{(t+1)} - \hat{\beta}^{(t)}\right)$$
+
+--
+
+- Multiply through by the inverse hessian
+
+$$\hat{\beta}^{(t+1)} =  \hat{\beta}^{(t)} - \mathbf{H}^{-1}(\hat{\beta}^{(t)}) S(\hat{\beta}^{(t)})$$
+
+--
+
+- Recall that the negative inverse hessian is also the **Observed Fisher Information** 
+  - An alternative algorithm, **Fisher Scoring** substitutes this for the expected Fisher Information
+  - Often these update steps can be expressed as solutions to a **weighted least squares** optimization problem
+--
+
+- All of these and more are implemented in the `maxLik` R package, which we will be using this week.
+  - Generally more "current" than `optim()` and includes some convenience functions.
+  
+---
+
+# Example: Propensity Scores
+
+- Let's estimate a logistic propensity score model for treatment in the .maroon[Keriakes et. al. (2000)] dataset
+
+```{r, warning=F, message=F}
+# Read in the dataset
+pci <- read_csv("data/pci.csv")
+```
+
+--
+
+- We want to predict treatment: `abcix` using a mix of discrete and continuous covariates...
+  - `stent` - Coronary stent deployment; binary indicator
+  - `height` - Height in centimeters; numeric integer
+  - `female` - Female gender; binary indicator
+  - `diabetic` - Diabetes mellitus diagnosis; binary indicator
+  - `acutemi` - Acute myocardial infarction within the previous 7 days; binary indicator
+  - `ejecfrac` - Left ejection fraction; numeric integer
+  - `ves1proc` - Number of vessels involved in the patient’s initial PCI procedure; numeric integer
+  
+---
+
+# Example: Propensity Scores
+
+- Make the design matrix $\mathbf{X}$
+
+```{r, warning=F, message=F}
+X_mat <- model.matrix(abcix ~ stent + height + female + diabetic + acutemi + ejecfrac + ves1proc, data=pci)
+head(X_mat) # View the top of the matrix
+```
+--
+
+- Sample size
+
+```{r}
+n_obs <- nrow(X_mat)
+n_obs
+```
+
+---
+
+# Example: Propensity Scores
+
+- From our logit link function, we have
+
+$$\log\left(\frac{\pi}{1-\pi}\right) = X_i^{\prime}\beta $$
+
+and 
+
+$$1 - \pi_i = 1 -  \frac{1}{1 + \exp(-X_i^{\prime}\beta)} = \frac{\exp(-X_i^{\prime}\beta)}{1 + \exp(-X_i^{\prime}\beta)} = \frac{1}{1 + \exp(X_i^{\prime}\beta)} $$
+
+
+- Let's write the log-likelihood:
+
+$$\ell(\beta | \mathbf{y}, \mathbf{X}) = \sum_{i=1}^Ny_i X_i^{\prime}\beta + \log\bigg(\frac{1}{1 + \exp(X_i^{\prime}\beta)}\bigg)$$
+$$\ell(\beta | \mathbf{y}, \mathbf{X}) = \sum_{i=1}^Ny_i X_i^{\prime}\beta - \log\bigg(1 + \exp(X_i^{\prime}\beta)\bigg)$$
+
+---
+
+# Example: Propensity Scores
+
+- And let's put the log-likelihood into code (this returns a vector of the log-likelihood for each observation)
+
+```{r, warning = F, message = F}
+logit_loglik <- function(beta, Y, X){
+  eta <- X%*%beta # linear predictor
+  lik <- Y*eta - log(1+exp(eta))
+  return(lik)
+}
+```
+
+--
+
+- Now let's optimize it to get the MLE
+
+```{r, warning=F, message=F}
+library(maxLik) # Maximum Likelihood library
+
+logit_mle <- maxLik(logit_loglik, 
+                      Y=pci$abcix,
+                      X=X_mat,
+                      start = rep(0, ncol(X_mat)),
+                      method = "NR")
+```
+
+---
+
+# Example: Propensity Scores
+
+- What did we get?
+```{r}
+est <- coef(logit_mle) # Our optimization routine
+names(est) <- colnames(X_mat)
+est
+
+# Compare to built-in R routine?
+logit_Rglm <- glm(abcix ~ stent + height + female + diabetic + acutemi + ejecfrac + ves1proc, 
+                  data=pci, family=binomial(link="logit"))
+coef(logit_Rglm)
+
+```
+
+---
+
+# Example: Propensity Scores
+
+- Let's obtain our (asymptotic) variance-covariance matrix
+
+```{r}
+logit_vcov <- solve(-hessian(logit_mle))
+```
+
+- Square root of the diagonal is our SEs
+
+```{r}
+logit_SEs <- sqrt(diag(logit_vcov))
+```
+
+
+---
+
+# Example: Propensity Scores
+
+- Let's get our t-statistics and p-values
+
+```{r}
+results <- rbind(coef(logit_mle), logit_SEs, 
+                     coef(logit_mle)/logit_SEs, 
+                     2*pnorm(-abs(coef(logit_mle)/logit_SEs)))
+colnames(results) <- colnames(X_mat)
+rownames(results) <- c("Estimate", "Std. Error", "Test statistic", "p-value")
+tidy(results)
+```
+
+---
+
+# Interpreting logit coefficients
+
+- How do we interpret the $\beta$s substantively?
+
+$$\log\bigg(\frac{\pi_i}{1-\pi_i}\bigg) = \beta_0 + \beta_1X_{i1} + \beta_2X_{i2} + \dotsc + \beta_k X_{ik}$$
+
+--
+
+- Take the partial derivative w.r.t. $X_{i1}$
+
+$$\frac{\partial}{\partial X_{i1}} \log\bigg(\frac{\pi_i}{1-\pi_i}\bigg) =  \beta_1$$
+--
+
+- So $\beta_k$ captures the change in the log-odds for a one-unit change in $X_{k}$
+  - Descriptively, it's the difference in log-odds between two observations that differ in $X_{k}$ by one unit.
+---
+
+# Interpreting logit coefficients
+
+- On the "log-odds" scale, the change due to an increase in $X_{k}$ does not depend on the values of the other $X$ variables (unless we explicitly specify an interaction).
+  - But thinking on the log-odds scale is hard! We think in terms of probabilities.
+  - This additivity *does not hold* when we take $\frac{\partial}{\partial X_{i1}} \pi_i$ 
+--
+
+- Logit models *implicitly* encode interactions with respect to the CEF $\mathbf{E}[Y_i | X_i]$
+
+---
+
+# Interpreting logit coefficients
+
+- **Remember**: A one-unit change in the linear predictor corresponds to *different* changes in probability depending on your baseline.
+
+```{r, echo=F, fig.width=5, fig.height = 3, fig.align="center"}
+logistic <- function(x) 1/(1 + exp(-x))
+draw_points <- data.frame(x1 = c(0, 1), x2 = c(0, 1), y1 = c(0,0), y2 = logistic(c(0,1)))
+draw_points2 <- data.frame(x1 = c(-5, -5), x2 = c(0, 1), y1 = logistic(c(0,1)), y2 = logistic(c(0,1)))
+logistic_marginal <- ggplot() + xlim(-5, 5) + ylim(0,1) + geom_function(fun=logistic) + theme_bw() + ylab(expression(pi)) + 
+  xlab(expression(paste("X",beta))) + geom_vline(xintercept=0, lty=2) + ggtitle("Marginal Effect at 0") +
+  geom_segment(aes(x=x1, y=y1, xend=x2, yend=y2), data=draw_points, col="dodgerblue", lwd=2) +
+  geom_segment(aes(x=x1, y=y1, xend=x2, yend=y2), data=draw_points2, col="indianred", lwd=2) 
+  
+logistic_marginal
+```
+--
+
+```{r, echo=F, fig.width=5, fig.height = 3, fig.align="center"}
+logistic <- function(x) 1/(1 + exp(-x))
+draw_points_2 <- data.frame(x1 = c(2, 3), x2 = c(2, 3), y1 = c(0,0), y2 = logistic(c(2,3)))
+draw_points_22 <- data.frame(x1 = c(-5, -5), x2 = c(2, 3), y1 = logistic(c(2,3)), y2 = logistic(c(2,3)))
+logistic_marginal_2 <- ggplot() + xlim(-5, 5) + ylim(0,1) + geom_function(fun=logistic) + theme_bw() + ylab(expression(pi)) + 
+  xlab(expression(paste("X",beta))) + geom_vline(xintercept=0, lty=2) + ggtitle("Marginal Effect at 2") +
+  geom_segment(aes(x=x1, y=y1, xend=x2, yend=y2), data=draw_points_2, col="dodgerblue", lwd=2) +
+  geom_segment(aes(x=x1, y=y1, xend=x2, yend=y2), data=draw_points_22, col="indianred", lwd=2) 
+  
+logistic_marginal_2
+```
+
+---
+
+# Transformed quantities
+
+- We have $\hat{\beta}$, but in the propensity score case, we really want $\hat{\pi_i} = Pr(D_i = 1 | X_i)$
+  - Just apply the inverse link to get the quantity we want
+  
+$$\hat{\pi_i} = \frac{1}{1 + \text{exp}(-X_i^{\prime}\beta)}$$
+--
+
+- The function of the MLEs is the MLE of the function
+  - So $\hat{\pi_i}$ is consistent for the true propensity scores (under our modeling assumptions)
+--
+
+- But what if we want to do inference on $\hat{\pi_i}$ or obtain a confidence interval?
+  - How do we obtain $\text{Var}(\hat{\pi_i}) = \text{Var}(g(\hat{\beta}))$?
+
+---
+
+# Delta method
+
+- We know $Var(\hat{\beta})$
+  - Asymptotically, it's the inverse Fisher Information or the inverse negative Hessian of the log-likelihood.
+--
+
+- To get $Var(g(\hat{\beta}))$, let's start with a first-order Taylor approximation around the true value $\beta$
+
+$$g(\hat{\beta}) \approx g(\beta) + [\nabla g(\beta)^{\prime}](\hat{\beta} - \beta)$$
+--
+
+- Take the variance 
+
+$$Var(g(\hat{\beta})) \approx Var\bigg(g(\beta) + [\nabla g(\beta)^{\prime}](\hat{\beta} - \beta)\bigg)$$
+--
+
+- Expand the sum
+
+$$Var(g(\hat{\beta})) \approx Var\bigg(g(\beta) + [\nabla g(\beta)^{\prime}]\hat{\beta} - [\nabla g(\beta)^{\prime}]\beta\bigg)$$
+
+---
+
+# Delta method
+
+- Variance of a constant is zero
+
+$$Var(g(\hat{\beta})) \approx Var\bigg([\nabla g(\beta)^{\prime}]\hat{\beta}\bigg)$$
+--
+
+- Pull out and "square" the constant. We now get an expression in terms of our original variance-covariance matrix
+
+$$Var(g(\hat{\beta})) \approx [\nabla g(\beta)^{\prime}]Var(\hat{\beta})[\nabla g(\beta)]$$
+--
+
+- This approximation is actually exact asymptotically (the higher-order terms of the Taylor polynomial go to zero)
+  - Use the usual plug-in estimator for the the gradient at the MLE
+  
+---
+
+# Example: Propensity Score
+
+- Let's determine the propensity of receiving treatment for a patient at the median covariate values 
+
+```{r}
+X_medians <- apply(X_mat, 2, median)
+X_medians
+```
+--
+
+- Construct our prediction function
+
+```{r}
+pred_prob <- function(beta, X){
+  return(1/(1 + exp(-X%*%beta)))
+}
+pred_median <- pred_prob(coef(logit_mle), X_medians)
+pred_median
+```
+
+---
+
+# Example: Propensity Score
+
+- We could solve for the gradient in terms of $\beta$ analytically, but there are plenty of convenient functions that will do this numerically
+
+```{r}
+pred_prob_gradient <- numericGradient(pred_prob, 
+                                      t0 = coef(logit_mle),
+                                      X = X_medians)
+```
+
+--
+
+- Applying the delta method
+
+```{r}
+pred_prob_var <- pred_prob_gradient%*%logit_vcov%*%t(pred_prob_gradient) # R treats vectors as row-vectors not column vectors
+```
+
+--
+
+- Making our 95% asymptotic CI for $\hat{\pi}(X)$
+
+```{r}
+c(pred_median - abs(qnorm(.025))*sqrt(pred_prob_var),
+  pred_median + abs(qnorm(.025))*sqrt(pred_prob_var))
+```
+
+---
+
+# "Monte Carlo" Delta Method
+
+- Alternatively, we could approximate the (asymptotic) sampling distribution of $\hat{\pi}$ by:
+  1. Sampling from the known asymptotic distribution of $\hat{\beta}$
+  2. Passing each sampled $\beta$ through to our function $\pi = g(\beta)$ 
+  3. Taking the variance of the simulated $\pi$s
+--
+
+- With many independent samples, this will get arbitrarily close to the true sampling variance of $\hat{\pi}$
+  - King, Tomz and Wittenberg (2000) is essentially this idea
+--
+
+- Note that this is **not** bootstrapping.
+  - We're assuming the model is correct (and we're not using "robust" SEs)
+  - Rather it's doing a "monte carlo" simulation instead of the delta method -- no need to take derivatives!
+
+---
+
+# "Monte Carlo" Delta Method
+
+- Let's try it:
+
+```{r}
+set.seed(60637)
+sim_betas <- MASS::mvrnorm(n=1e5, mu = coef(logit_mle), Sigma = logit_vcov)
+sim_pi <- apply(sim_betas, 1, function(x) pred_prob(x, X=X_medians))
+```
+
+--
+
+- How close are we?
+
+```{r}
+c(pred_median - abs(qnorm(.025))*sd(sim_pi),
+  pred_median + abs(qnorm(.025))*sd(sim_pi))
+```
+
+---
+
+class: title-slide
+
+# "Robust" inference and mis-specification
+
+---
