@@ -8,6 +8,7 @@ output:
     css: [default, uchicago_pol_meth.css]
     nature:
       highlightLines: true
+      ratio: '16:9'
       
 ---
 class: title-slide
@@ -412,7 +413,7 @@ results <- rbind(coef(logit_mle), logit_SEs,
                      2*pnorm(-abs(coef(logit_mle)/logit_SEs)))
 colnames(results) <- colnames(X_mat)
 rownames(results) <- c("Estimate", "Std. Error", "Test statistic", "p-value")
-tidy(results)
+results
 ```
 
 ---
@@ -596,7 +597,7 @@ c(pred_median - abs(qnorm(.025))*sqrt(pred_prob_var),
 --
 
 - Note that this is **not** bootstrapping.
-  - We're assuming the model is correct (and we're not using "robust" SEs)
+  - We're using our existing estimator of $\widehat{Var(\hat{\beta})}$
   - Rather it's doing a "monte carlo" simulation instead of the delta method -- no need to take derivatives!
 
 ---
