@@ -1694,6 +1694,9 @@ X_i^{\prime}\beta\]</span></p>
 <p>Write an R function that takes as input a vector of coefficients
 <span class="math inline">\(\beta\)</span>, outcome vector <span class="math inline">\(\mathbf{Y}\)</span> and design matrix <span class="math inline">\(\mathbf{X}\)</span> and returns the poisson
 log-likelihood.</p>
+<p>Hint: You can have it return the log-likelihood as a scalar or a
+vector of the individual log-likelihood for each observation – the
+latter will be useful (and works with <code>maxLik</code>).</p>
 </div>
 <div id="part-c" class="section level1">
 <h1>Part C</h1>
@@ -1726,8 +1729,8 @@ equals zero with <span class="math inline">\(\alpha = .05\)</span>.</p>
 deaths for an interstate conflict in the year 2018? Construct a 95%
 confidence interval for this prediction using the delta method and your
 variance-covariance matrix from D.</p>
-<p>Hint: You may find the <code>gradient()</code> function from
-<code>maxLik</code> useful for this part and part G</p>
+<p>Hint: You may find the <code>numericGradient()</code> function from
+<code>maxLik</code> useful for this part.</p>
 </div>
 <div id="part-f" class="section level1">
 <h1>Part F</h1>
@@ -1744,6 +1747,9 @@ variance-covariance matrix of your Poisson regression coefficient
 the conventional MLE standard errors. What does this tell you about the
 modeling assumptions that you’ve made in previous parts of this
 problem?</p>
+<p>Hint: You may find the <code>gradient()</code> and
+<code>hessian()</code> functions from <code>maxLik</code> useful for
+this part.</p>
 </div>
 <div id="problem-2" class="section level1">
 <h1>Problem 2</h1>

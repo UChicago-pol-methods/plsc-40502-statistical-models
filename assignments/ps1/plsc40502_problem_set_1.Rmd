@@ -3,9 +3,9 @@ title: 'PLSC 40502: Problem Set 1'
 author: "YOUR NAME"
 date: "January 8, 2022"
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+  pdf_document: default
 ---
   
 ```{r setup, include=FALSE}
@@ -51,6 +51,8 @@ Write down the log-likelihood $\mathcal{\ell}(\beta| \mathbf{X}, \mathbf{Y})$ fo
 
 Write an R function that takes as input a vector of coefficients $\beta$, outcome vector $\mathbf{Y}$ and design matrix $\mathbf{X}$ and returns the poisson log-likelihood.
 
+Hint: You can have it return the log-likelihood as a scalar or a vector of the individual log-likelihood for each observation -- the latter will be useful (and works with `maxLik`).
+
 # Part C 
 
 Using the UCDP data, use your function from Part B and the `maxLik` R package to obtain the MLE for the coefficients of a poisson GLM that regresses the total number of battle deaths in a given conflict-year (using the "best" estimate: `bd_best`) on the year of observation, an indicator for whether the conflict is "interstate", and an indicator for whether the conflict is "internationalized intrastate" (the "left out" group for these dummies is 'intrastate').
@@ -69,7 +71,7 @@ Provide a substantive interpretation of the coefficient on `year` in terms of ba
 
 What does the model predict will be the expected count of battle deaths for an interstate conflict in the year 2018? Construct a 95% confidence interval for this prediction using the delta method and your variance-covariance matrix from D.
 
-Hint: You may find the `gradient()` function from `maxLik` useful for this part and part G 
+Hint: You may find the `numericGradient()` function from `maxLik` useful for this part. 
 
 # Part F
 
@@ -78,6 +80,8 @@ Compare your prediction from E to the same prediction from a linear regression m
 # Part G
 
 Implement the "robust" Huber sandwich estimator for the variance-covariance matrix of your Poisson regression coefficient (ignore clustering for now, just implement the "heteroskedasticity"-robust version). Compare these standard errors to the conventional MLE standard errors. What does this tell you about the modeling assumptions that you've made in previous parts of this problem?
+
+Hint: You may find the `gradient()` and `hessian()` functions from `maxLik` useful for this part. 
 
 # Problem 2
 
