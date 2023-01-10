@@ -115,8 +115,8 @@ class: title-slide
 
 - Exponential family distributions have density functions of the form
 
-$$P(y|\theta) = h(x) \exp\bigg\{b(\theta) \cdot T(y) - A(\theta)\bigg\}$$
-where $h(x)$, $A(\theta)$, $\eta(\theta)$ and $T(y)$ are known functions
+$$P(y|\theta) = h(y) \exp\bigg\{b(\theta) \cdot T(y) - A(\theta)\bigg\}$$
+where $h(y)$, $A(\theta)$, $\eta(\theta)$ and $T(y)$ are known functions
 
 --
 - The key intuition: exponential distributions factorize in a convenient way
@@ -154,7 +154,7 @@ $$P(y_i|\pi_i) = \exp\bigg\{y_i\log\bigg(\frac{\pi_i}{1-\pi_i}\bigg) + \log(1-\p
 --
 
 - So our exponential form is
-  - $h(x) = 1$
+  - $h(y) = 1$
   - $T(y) = y_i$
   - $A(\theta) = \log(1-\pi_i)$
   - $b(\theta) = \log\bigg(\frac{\pi_i}{1-\pi_i}\bigg)$
@@ -482,7 +482,7 @@ logistic_marginal_2
 - We have $\hat{\beta}$, but in the propensity score case, we really want $\hat{\pi_i} = Pr(D_i = 1 | X_i)$
   - Just apply the inverse link to get the quantity we want
   
-$$\hat{\pi_i} = \frac{1}{1 + \text{exp}(-X_i^{\prime}\beta)}$$
+$$\hat{\pi_i} = \frac{1}{1 + \text{exp}(-X_i^{\prime}\hat{\beta})}$$
 --
 
 - The function of the MLEs is the MLE of the function
