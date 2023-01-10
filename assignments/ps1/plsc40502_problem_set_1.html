@@ -1698,7 +1698,7 @@ log-likelihood.</p>
 <div id="part-c" class="section level1">
 <h1>Part C</h1>
 <p>Using the UCDP data, use your function from Part B and the
-<code>optim()</code> function to obtain the MLE for the coefficients of
+<code>maxLik</code> R package to obtain the MLE for the coefficients of
 a poisson GLM that regresses the total number of battle deaths in a
 given conflict-year (using the “best” estimate: <code>bd_best</code>) on
 the year of observation, an indicator for whether the conflict is
@@ -1726,8 +1726,8 @@ equals zero with <span class="math inline">\(\alpha = .05\)</span>.</p>
 deaths for an interstate conflict in the year 2018? Construct a 95%
 confidence interval for this prediction using the delta method and your
 variance-covariance matrix from D.</p>
-<p>Hint: You may find the <code>numDeriv</code> package useful for this
-part and part G</p>
+<p>Hint: You may find the <code>gradient()</code> function from
+<code>maxLik</code> useful for this part and part G</p>
 </div>
 <div id="part-f" class="section level1">
 <h1>Part F</h1>

@@ -3,9 +3,9 @@ title: 'PLSC 40502: Problem Set 1'
 author: "YOUR NAME"
 date: "January 8, 2022"
 output:
+  pdf_document: default
   html_document:
     df_print: paged
-  pdf_document: default
 ---
   
 ```{r setup, include=FALSE}
@@ -53,7 +53,7 @@ Write an R function that takes as input a vector of coefficients $\beta$, outcom
 
 # Part C 
 
-Using the UCDP data, use your function from Part B and the `optim()` function to obtain the MLE for the coefficients of a poisson GLM that regresses the total number of battle deaths in a given conflict-year (using the "best" estimate: `bd_best`) on the year of observation, an indicator for whether the conflict is "interstate", and an indicator for whether the conflict is "internationalized intrastate" (the "left out" group for these dummies is 'intrastate').
+Using the UCDP data, use your function from Part B and the `maxLik` R package to obtain the MLE for the coefficients of a poisson GLM that regresses the total number of battle deaths in a given conflict-year (using the "best" estimate: `bd_best`) on the year of observation, an indicator for whether the conflict is "interstate", and an indicator for whether the conflict is "internationalized intrastate" (the "left out" group for these dummies is 'intrastate').
 
 Hint: Check the codebook for the `type_of_conflict` variable to find our how to generate the correct dummy variables for conflict type.
 
@@ -69,7 +69,7 @@ Provide a substantive interpretation of the coefficient on `year` in terms of ba
 
 What does the model predict will be the expected count of battle deaths for an interstate conflict in the year 2018? Construct a 95% confidence interval for this prediction using the delta method and your variance-covariance matrix from D.
 
-Hint: You may find the `numDeriv` package useful for this part and part G
+Hint: You may find the `gradient()` function from `maxLik` useful for this part and part G 
 
 # Part F
 
