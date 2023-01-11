@@ -628,3 +628,46 @@ class: title-slide
 # "Robust" inference and mis-specification
 
 ---
+
+# Latent variables
+
+- Another common way of formulating discrete outcome regressions is in terms of an unobserved continuous "latent" variable and an observation mechanism.
+  - Instead of putting a distribution on $Y_i$, we put one on an unobserved $Y_i^*$
+  - $Y_i$ is some function of $Y_i^*$ (usually an indicator function of some sort)
+--
+
+- For the logistic regression
+
+$$Y_i = \mathbb{1}(Y_i^* \ge 0)$$
+$$Y_i^* = X_i^{\prime}\beta + \epsilon_i$$
+$$\epsilon_i \sim \text{Logistic}(0, 1)$$
+
+--
+
+- The Logistic distribution is parameterized in terms of a "location" (mean) $\mu$ and a "scale" parameter $s>0$. 
+  - For $\mu = 0$, $s= 1$ we have the "standard" logistic
+
+$$P(\epsilon_i < x) = \frac{1}{1 + \exp(-x)}$$
+
+---
+
+# Latent variables
+
+- So what's $E[Y_i|X_i] = Pr(Y_i = 1|X_i)$?
+
+$$Pr(Y_i = 1|X_i) = Pr(Y_i^* \ge 0) = Pr(\epsilon_i < X_i^{\prime}\beta) = \frac{1}{1 + \exp(-X_i^{\prime}\beta)}$$
+--
+
+- We can write the **probit** similarly, defining the error distribution as
+
+$$\epsilon_i \sim \text{Normal}(0, 1)$$
+--
+
+- And by extension, the probability $Pr(Y_i|X_i)$
+
+$$Pr(Y_i = 1|X_i) = Pr(Y_i^* \ge 0) = Pr(\epsilon_i < X_i^{\prime}\beta) = \Phi(X_i^{\prime}\beta)$$
+
+---
+
+
+
