@@ -749,11 +749,13 @@ logistic_dens <- ggplot() + xlim(-8, 8) + geom_function(fun=dlogis) + theme_bw()
 
 logistic_dens
 ```
-- Shifting the mean of $Y^*$ up by 2:
+--
+
+- Shifting the mean of $Y^*$ up by 3:
 
 ```{r, echo=F, fig.width=7, fig.height = 3, fig.align="center"}
-logistic_dens <- ggplot() + xlim(-8, 8) + geom_function(fun=dlogis, args=list(location=2)) + theme_bw() + ylab("Density") + geom_area(aes(x=c(-8,-1)),stat = "function", fun = dlogis, fill = "dodgerblue", xlim = c(-8, -1),  args=list(location=2)) +  geom_area(aes(x=c(-1,2)),stat = "function", fun = dlogis, fill = "darkorange", xlim = c(-1, 2),  args=list(location=2)) + geom_area(aes(x=c(2,8)),stat = "function", fun = dlogis, fill = "yellow", xlim = c(2, 8),  args=list(location=2)) + 
-  xlab("Y*") + geom_vline(xintercept=0, lty=2) + geom_vline(xintercept=-1, lty=3, col="darkgreen", lwd=1) + geom_vline(xintercept=2, lty=3, col="darkgreen", lwd=1) 
+logistic_dens <- ggplot() + xlim(-8, 8) + geom_function(fun=dlogis, args=list(location=3)) + theme_bw() + ylab("Density") + geom_area(aes(x=c(-8,-1)),stat = "function", fun = dlogis, fill = "dodgerblue", xlim = c(-8, -1),  args=list(location=3)) +  geom_area(aes(x=c(-1,2)),stat = "function", fun = dlogis, fill = "darkorange", xlim = c(-1, 2),  args=list(location=3)) + geom_area(aes(x=c(2,8)),stat = "function", fun = dlogis, fill = "yellow", xlim = c(2, 8),  args=list(location=3)) + 
+  xlab("Y*") + geom_vline(xintercept=3, lty=2) + geom_vline(xintercept=-1, lty=3, col="darkgreen", lwd=1) + geom_vline(xintercept=2, lty=3, col="darkgreen", lwd=1) 
 
 logistic_dens
 ```
@@ -872,9 +874,13 @@ $$\sqrt{n}(\hat{\theta} - \theta) \underset{d}{\rightarrow}  \bigg[\mathbf{E}[-\
 
 $$Var(\hat{\theta}) = \bigg[\mathbf{E}[-\ell^{\prime\prime}(\theta_0|\mathbf{y})]\bigg]^{-1}\bigg[Var(g_i(Y_i|\theta_0))\bigg]\bigg[\mathbf{E}[-\ell^{\prime\prime}(\theta_0|\mathbf{y})]\bigg]^{-1}$$
 
---
+---
 
-- We'll use our usual plug-in estimator for the Hessian at the MLE, but instead of showing that that middle term *also* equals the expected negative hessian (and therefore cancels), we'll use a different plug-in estimator for that middle using the outer product of the gradient of each observation at the MLE.
+# "Robust" Standard Errors
+
+- We'll use our usual plug-in estimator for the Hessian at the MLE
+  - But earlier, we showed that under the model, the middle term *also* equals the expected negative hessian (and therefore cancels with one of the inverses).
+  - Instead, we'll use a different plug-in estimator using the outer product of the gradient of each observation at the MLE.
 
 $$\widehat{Var(\hat{\theta})} = \bigg[-\sum_{i=1}^n h_i(Y_i|\hat{\theta})\bigg]^{-1}\bigg[\sum_{i=1}^n g_i(Y_i|\hat{\theta})  g_i(Y_i|\hat{\theta}) ^{\prime}\bigg]\bigg[-\sum_{i=1}^n h_i(Y_i|\hat{\theta})\bigg]^{-1}$$
 
@@ -899,6 +905,8 @@ $$\widehat{Var(\hat{\theta})} = \underbrace{\bigg[-\sum_{i=1}^n h_i(Y_i|\hat{\th
 - Let's go back to our propensity score logistic regression of abciximab treatment on the predictive covariates
 
 ```{r}
+library(sandwich) # this contains "estfun()"
+
 logit_sandwich <- solve(-hessian(logit_mle))%*%(t(estfun(logit_mle))%*%estfun(logit_mle))%*%solve(-hessian(logit_mle))
 ```
 
@@ -912,10 +920,16 @@ logit_sandwich_SEs <- sqrt(diag(logit_sandwich))
 logit_sandwich_SEs
 ```
 
+---
+
+# Implementing sandwich SEs
+
 - These are also implemented in the `sandwich` package which operates on a lot of common MLE packages in R
 
 ```{r}
 logit_sandwich_vcov <- sandwich::sandwich(logit_mle)
+sqrt(diag(logit_sandwich_vcov))
+logit_sandwich_SEs
 ```
 
 ---
@@ -938,6 +952,10 @@ for (i in 1:nIter){
   beta_boot[i,] <- coef(mle_boot)
 }
 ```
+
+---
+
+# Implementing the Bootstrap
 
 - Compare our bootstrap variance-covariance matrix to the sandwich estimator one
 
