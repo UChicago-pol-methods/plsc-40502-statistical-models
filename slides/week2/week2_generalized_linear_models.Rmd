@@ -24,8 +24,11 @@ library(tidyverse)
 library(haven)
 library(estimatr)
 library(knitr)
+
 options(digits=3)
+
 ```
+
 ---
 
 # Previously
@@ -625,7 +628,7 @@ c(pred_median - abs(qnorm(.025))*sd(sim_pi),
 
 class: title-slide
 
-# "Robust" inference and mis-specification
+# "Latent variables" and logit
 
 ---
 
@@ -669,5 +672,281 @@ $$Pr(Y_i = 1|X_i) = Pr(Y_i^* \ge 0) = Pr(\epsilon_i < X_i^{\prime}\beta) = \Phi(
 
 ---
 
+# Latent variables
 
+- We can visualize this as an integral over the density of the random "error" $\epsilon_i$
 
+```{r, echo=F, fig.width=5, fig.height = 3, fig.align="center"}
+logistic_dens <- ggplot() + xlim(-5, 5) + geom_function(fun=dlogis) + theme_bw() + ylab("Density") + geom_area(aes(x=c(-5,2)),stat = "function", fun = dlogis, fill = "dodgerblue", xlim = c(-5, 2)) + 
+  xlab(expression(epsilon)) + geom_vline(xintercept=0, lty=2) + geom_vline(xintercept=2, lty=3, col="indianred", lwd=1) 
+
+logistic_dens
+```
+
+--
+
+- Same thing for a probit
+
+```{r, echo=F, fig.width=5, fig.height = 3, fig.align="center"}
+probit_dens <- ggplot() + xlim(-5, 5) + geom_function(fun=dnorm) + theme_bw() + ylab("Density") + geom_area(aes(x=c(-5,2)),stat = "function", fun = dnorm, fill = "dodgerblue", xlim = c(-5, 2)) + 
+  xlab(expression(epsilon)) + geom_vline(xintercept=0, lty=2) + geom_vline(xintercept=2, lty=3, col="indianred", lwd=1) 
+
+probit_dens
+```
+
+---
+
+# Ordinal logit
+
+- Using the latent variable formulation lets us extend the binary outcomes to logit to outcomes with multiple discrete levels.
+- For example, consider an "ordinal" response variable
+  - (e.g.) a likert scale (1 = "strongly disagree", 3 = "neutral", 5 = "strongly agree")
+--
+
+- The responses are *ordered* but the intervals between them do not have any meaning.
+  - A popular modeling technique with an ordinal $Y$ is to treat it as an expression of a latent variable
+--
+
+- In an *ordered logit* model, an ordinal outcome $Y$ with $L$ unique, ordered values $Y \in \{1, 2, 3, \dotsc L\}$ is a function of a latent variable and a set of $L-1$ cutpoints $\kappa$
+
+$$Y_i = \begin{cases}1 &\text{if } Y_i^* \le \kappa_1 \\
+                      2 &\text{if } \kappa_1 < Y_i^* \le \kappa_2\\
+                      3 &\text{if } \kappa_2 < Y_i^* \le \kappa_3\\
+                      \vdots &\\
+                      L &\text{if } Y_i^* > \kappa_{L-1}\end{cases}$$
+--
+
+- We still assume $Y_i^*$ has a logistic distribution
+
+$$Y_i^* = X_i^{\prime}\beta + \epsilon_i$$
+
+$$\epsilon_i \sim \text{Logistic}(0, 1)$$
+
+---
+
+# Ordinal logit
+
+- To estimate the model, we now have to estimate both the $\beta$ parameters and the $L-1$ $\kappa$ parameters
+  - Note we omit the intercept from our $X_i$ -- the $\kappa$ parameters are essentially the "intercepts" for each boundary between the choices
+--
+
+- How does the model map changes in the latent variable to changes in probability?
+
+$$Pr(Y_i = 1) = Pr(Y_i^* \le \kappa_1) = Pr(\epsilon_i \le \kappa_1 - X_i^{\prime}\beta)$$
+$$Pr(Y_i = 2) = Pr(Y_i = 2 \cup Y_i = 1) - Pr(Y_i = 1) = Pr(Y_i^* \le \kappa_2) - Pr(Y_i^* \le \kappa_1)$$
+$$Pr(Y_i = 3) = Pr(Y_i = 3 \cup Y_i = 2 \cup Y_i = 1) -  Pr(Y_i = 2 \cup Y_i = 1)  = Pr(Y_i^* \le \kappa_3) - Pr(Y_i^* \le \kappa_2)$$
+--
+
+---
+
+# Ordinal logit
+
+- Let's think in terms of the distribution of $Y_i^*$ and the cut-points for a case with $L=3$. For $X_i^{\prime}\beta = 0$:
+
+```{r, echo=F, fig.width=7, fig.height = 3, fig.align="center"}
+logistic_dens <- ggplot() + xlim(-8, 8) + geom_function(fun=dlogis) + theme_bw() + ylab("Density") + geom_area(aes(x=c(-8,-1)),stat = "function", fun = dlogis, fill = "dodgerblue", xlim = c(-8, -1)) +  geom_area(aes(x=c(-1,2)),stat = "function", fun = dlogis, fill = "darkorange", xlim = c(-1, 2)) + geom_area(aes(x=c(2,8)),stat = "function", fun = dlogis, fill = "yellow", xlim = c(2, 8)) + 
+  xlab("Y*") + geom_vline(xintercept=0, lty=2) + geom_vline(xintercept=-1, lty=3, col="darkgreen", lwd=1) + geom_vline(xintercept=2, lty=3, col="darkgreen", lwd=1) 
+
+logistic_dens
+```
+- Shifting the mean of $Y^*$ up by 2:
+
+```{r, echo=F, fig.width=7, fig.height = 3, fig.align="center"}
+logistic_dens <- ggplot() + xlim(-8, 8) + geom_function(fun=dlogis, args=list(location=2)) + theme_bw() + ylab("Density") + geom_area(aes(x=c(-8,-1)),stat = "function", fun = dlogis, fill = "dodgerblue", xlim = c(-8, -1),  args=list(location=2)) +  geom_area(aes(x=c(-1,2)),stat = "function", fun = dlogis, fill = "darkorange", xlim = c(-1, 2),  args=list(location=2)) + geom_area(aes(x=c(2,8)),stat = "function", fun = dlogis, fill = "yellow", xlim = c(2, 8),  args=list(location=2)) + 
+  xlab("Y*") + geom_vline(xintercept=0, lty=2) + geom_vline(xintercept=-1, lty=3, col="darkgreen", lwd=1) + geom_vline(xintercept=2, lty=3, col="darkgreen", lwd=1) 
+
+logistic_dens
+```
+
+---
+
+# Ordinal logit
+
+- This structural mapping from $Y^*$ to $P(Y_i = l)$ is not trivial - it encodes a particular assumption about how these probabilities relate to one another.
+- Referred to as the **proportional odds** assumption
+
+$$\log\left(\frac{Pr(Y_i \le l)}{1 - Pr(Y_i \le l)}\right) = \kappa_l - X_i^{\prime}\beta$$
+--
+
+- **Intuitively** -- The $\beta$ parameters are shared across all the possible outcome levels. Information about whether someone responds "strongly agree" *also* tells us something about how likely they would be to respond specifically to "agree", "neutral", "disagree", and "strongly disagree"
+  - Not trivial if there's non-monotonicity or heterogeneous effects. 
+  - Be careful with these models!
+  
+---
+
+class: title-slide
+
+# "Robust" inference and mis-specification
+
+---
+
+# Mis-specification
+
+- Often we'll encounter settings where we only believe *part* of the maximum likelihood model
+--
+
+- Perhaps that we've correctly specified $g(E[Y_i | X_i])$, but we don't believe the complete distributional assumptions we've placed on the outcome
+  - We don't believe the observations are "**identically** distributed"
+--
+
+- Or we believe that some outcomes are correlated with one another even after conditioning on the covariates 
+  - We don't believe they're **independently** distributed.
+--
+
+- What can we do?
+  - Suppose our MLE is still **consistent** for something we're interested in (e.g. the CEF).
+  - But the outcome model is incorrect (e.g. due to heteroskedasticity) and so our variance estimator is mis-specified.
+  - Can we still estimate the variance of our MLE when it's *not* efficient? Yes!
+
+---
+
+# "Robust" Standard Errors
+
+- Suppose we obtain a maximum likelihood estimate based on maximizing the log-likelihood
+
+$$\ell(\theta|\mathbf{y}) = \sum_{i=1}^n \log f_i(y_i | \theta)$$
+
+- Note that the density here is being indexed by $i$
+  - We're relaxing the "identically" distributed assumption -- we're leaving the full distribution of $Y_i | \theta$ unspecified
+--
+
+- Denote the score
+
+$$\ell^{\prime}(\theta|\mathbf{y}) = \sum_{i=1}^n \frac{\partial}{\partial \theta} \log f_i(Y_i | \theta) = \sum_{i=1}^n g_i(Y_i|\theta)$$
+--
+
+- And the Hessian
+
+$$\ell^{\prime\prime}(\theta|\mathbf{y}) = \sum_{i=1}^n \frac{\partial^{2}}{\partial \theta^{2}} \log f_i(Y_i | \theta) = \sum_{i=1}^n h_i(Y_i|\theta)$$
+
+---
+
+# "Robust" Standard Errors
+
+- Assume that there is a true $\theta_0$
+- Let's do a Taylor approximation of the likelihood around that true value
+
+$$\ell(\theta|\mathbf{y}) =  \ell(\theta_0|\mathbf{y}) + \ell^{\prime}(\theta_0|\mathbf{y})(\theta - \theta_0) + \frac{1}{2}(\theta- \theta_0)^{\prime}\ell^{\prime\prime}(\theta_0|\mathbf{y})(\theta-\theta_0)$$
+--
+
+- The MLE $\hat{\theta}$ is the solution that maximizes that likelihood function. 
+  - So we know it satisfies the equation that sets the score equal to $0$. Let's take the derivative of the above w.r.t $\theta$ and solve for $0$
+  
+$$0 = \ell^{\prime}(\theta_0|\mathbf{y}) + (\hat{\theta} - \theta_0)^{\prime}\ell^{\prime\prime}(\theta_0|\mathbf{y})$$
+--
+
+- Solve for $\hat{\theta}$
+
+$$(\hat{\theta} - \theta_0) = [-\ell^{\prime\prime}(\theta_0|\mathbf{y})]^{-1}\ell^{\prime}(\theta_0|\mathbf{y})$$
+---
+
+# "Robust" Standard Errors
+
+- Plug in our definitions from before
+
+$$(\hat{\theta} - \theta) = \bigg(- \sum_{i=1}^n h_i(Y_i|\theta_0)\bigg)^{-1}\bigg(\sum_{i=1}^n g_i(Y_i|\theta_0)\bigg)$$
+
+--
+
+- Multiplying by 1 and using properties of inverses
+
+$$(\hat{\theta} - \theta) = \bigg(-\frac{1}{n}\sum_{i=1}^n h_i(Y_i|\theta_0)\bigg)^{-1}\bigg(\frac{1}{n}\sum_{i=1}^n g_i(Y_i|\theta_0)\bigg)$$
+
+--
+
+- We make two asymptotic arguments
+  - The first term converges in probability to the Fisher information
+  - The second term times $\sqrt{n}$ converges in distribution to a normal distribution with mean $0$ and variance $Var(g_i(Y_i|\theta_0))$
+
+---
+
+# "Robust" Standard Errors
+
+- So asymptotically, we have
+
+$$\sqrt{n}(\hat{\theta} - \theta) \underset{d}{\rightarrow}  \bigg[\mathbf{E}[-\ell^{\prime\prime}(\theta_0|\mathbf{y})]\bigg]^{-1}\mathcal{N}\bigg(0, Var(g_i(Y_i|\theta_0))\bigg)$$
+
+--
+
+- And therefore, the asymptotic variance of $\hat{\theta}$ is
+
+$$Var(\hat{\theta}) = \bigg[\mathbf{E}[-\ell^{\prime\prime}(\theta_0|\mathbf{y})]\bigg]^{-1}\bigg[Var(g_i(Y_i|\theta_0))\bigg]\bigg[\mathbf{E}[-\ell^{\prime\prime}(\theta_0|\mathbf{y})]\bigg]^{-1}$$
+
+--
+
+- We'll use our usual plug-in estimator for the Hessian at the MLE, but instead of showing that that middle term *also* equals the expected negative hessian (and therefore cancels), we'll use a different plug-in estimator for that middle using the outer product of the gradient of each observation at the MLE.
+
+$$\widehat{Var(\hat{\theta})} = \bigg[-\sum_{i=1}^n h_i(Y_i|\hat{\theta})\bigg]^{-1}\bigg[\sum_{i=1}^n g_i(Y_i|\hat{\theta})  g_i(Y_i|\hat{\theta}) ^{\prime}\bigg]\bigg[-\sum_{i=1}^n h_i(Y_i|\hat{\theta})\bigg]^{-1}$$
+
+---
+
+# The "Sandwich" Estimator
+
+- We call this the "sandwich" estimator because it consists of a "meat" between two slices of identical "bread"
+
+$$\widehat{Var(\hat{\theta})} = \underbrace{\bigg[-\sum_{i=1}^n h_i(Y_i|\hat{\theta})\bigg]^{-1}}_{\text{bread}}\underbrace{\bigg[\sum_{i=1}^n g_i(Y_i|\hat{\theta})  g_i(Y_i|\hat{\theta}) ^{\prime}\bigg]}_{\text{meat}}\underbrace{\bigg[-\sum_{i=1}^n h_i(Y_i|\hat{\theta})\bigg]^{-1}}_{\text{bread}}$$
+
+--
+
+- These estimators are **consistent** for the asymptotic variance under mis-specification of the outcome distribution
+  - But finite-sample properties can be not great -- typically we get *undercoverage* in small samples.
+  - Typically add a finite-sample correction (e.g. $\frac{N}{N-K}$) 
+  
+---
+
+# Implementing sandwich SEs
+
+- Let's go back to our propensity score logistic regression of abciximab treatment on the predictive covariates
+
+```{r}
+logit_sandwich <- solve(-hessian(logit_mle))%*%(t(estfun(logit_mle))%*%estfun(logit_mle))%*%solve(-hessian(logit_mle))
+```
+
+- Compare the robust SEs to the ones we had earlier
+
+```{r}
+# Non-robust
+logit_SEs
+# Robust
+logit_sandwich_SEs <- sqrt(diag(logit_sandwich))
+logit_sandwich_SEs
+```
+
+- These are also implemented in the `sandwich` package which operates on a lot of common MLE packages in R
+
+```{r}
+logit_sandwich_vcov <- sandwich::sandwich(logit_mle)
+```
+
+---
+
+# Implementing the Bootstrap
+
+- Let's do a pairs/resampling bootstrap 
+
+```{r, cache=T}
+set.seed(60637)
+nIter <- 1000
+beta_boot <- matrix(nrow=nIter, ncol=ncol(X_mat))
+for (i in 1:nIter){
+  boot_rows <- sample(1:nrow(X_mat), replace=T)#Resample rows 
+  mle_boot <- maxLik(logit_loglik, 
+                      Y=pci$abcix[boot_rows],
+                      X=X_mat[boot_rows,],
+                      start = rep(0, ncol(X_mat)),
+                      method = "NR")
+  beta_boot[i,] <- coef(mle_boot)
+}
+```
+
+- Compare our bootstrap variance-covariance matrix to the sandwich estimator one
+
+```{r}
+# Sandwich
+logit_sandwich_SEs
+# Bootstrap
+boot_SEs <- sqrt(diag(var(beta_boot)))
+boot_SEs
+```
+
+---
