@@ -1026,3 +1026,127 @@ boot_SEs
 ```
 
 ---
+
+class: title-slide
+
+# Survival models
+
+---
+
+# Survival models
+
+- Often we have outcome data that is measured as the "time-to-event"
+  - From the medical literature, this is often the number of days before a patient suffers some adverse event (e.g. death).
+  - But lots of other applications (e.g. time to treaty ratification)
+--
+
+- Assume we observe N i.i.d. event times $T_1, T_2, \dotsc, T_n$
+--
+
+- Define the "survival function"
+
+$$S(t) = Pr(T > t) = 1 - F(t)$$
+
+--
+
+- We'll also often work with the "hazard" or the "instantaneous" probability of an event happening *given* that it has not yet occurred
+
+$$h(t) = \underset{\Delta t \to 0}{\lim} \frac{P(t < T_1 \le t + \Delta t | T_1 > t)}{\Delta t} = \frac{f(t)}{S(t)} = \frac{f(t)}{1-F(t)}$$
+- **Intuitively**: Given that I know that an event has not occurred until $t$, what is the probability that it will immediately occur next!
+
+--
+
+- We'll also define the cumulative hazard
+
+$$H(t) = \int_{0}^{t} h(u)du = \int_0^{t} \frac{f(t)}{S(t)} du =  -\log(S(t))$$
+
+---
+
+# Non-parametric approach
+
+- The easiest way to estimate $S(t) = 1 - F(t)$ is to just plug in $\hat{F(t)}$ -- our empirical CDF in the sample
+  - At any given value $t$, how many events occur *after* $t$
+--
+
+- **Problem**: This doesn't address *censoring* of observations -- sometimes we stop observing a unit at time $t^*$ rather than observing an actual event.
+  - We know that $T_i > t^*$ but not what $T_i$ actually equals
+--
+
+- One approach to constructing a non-parametric estimator of the survival function *under censoring* is the **Kaplan-Meier** estimator.
+
+---
+
+# Kaplan-Meier Estimator
+
+- Start by arranging the possible event times from $0 < t_{(1)} < t_{(2)} < t_{(3)} < t_{(4)}, \dotsc, < t_{(n)}$
+- The **Kaplan-Meier** estimator for the survival function at any time $t$ involves a product over the empirical event times that precede $t$
+
+$$\hat{S}(t) = \prod_{j: t_{(j)} \le t} \bigg(1 - \frac{d_j}{r_j}\bigg)$$
+-- 
+
+- $d_j$ denotes the number of units that experience an event at time $t_(j)$ 
+- $r_j$ is the number of units that are still in the risk set up to time $j$
+  - Units drop out of the risk set $r$ over time by either experiencing an event or being censored
+
+
+---
+
+# Illustration: Lung Cancer
+
+- Let's look at a sample dataset from the `survival` R package on survival times for patients with advanced lung cancer.
+
+```{r}
+library(survival)
+data(cancer, package="survival")
+as_tibble(lung)
+```
+
+--
+
+- We want to estimate $S(t | \text{Sex} = \text{Male})$ and $S(t | \text{Sex} = \text{Female})$
+
+---
+
+# Illustration: Lung Cancer
+
+- In the `survival` package, we need to define a "survival" outcome in terms of the event time and the censoring indicator
+
+```{r}
+surv_model <- survfit(Surv(time, status) ~ 1, data=lung)
+```
+
+---
+
+# Illustration: Lung Cancer
+
+- Plot the curve for the sample as a whole
+
+```{r, fig.width=8, fig.height=6, fig.align='center'}
+plot(surv_model, xlab="Survival Time", conf.int=T, ylab="Survival Rate", mark.time=TRUE)
+```
+
+---
+
+
+# Illustration: Lung Cancer
+
+- Now let's do this for gender
+
+```{r}
+surv_model_sex <- survfit(Surv(time, status) ~ sex, data=lung)
+```
+
+---
+
+# Illustration: Lung Cancer
+
+- Plot separate curves for men and women
+
+```{r, fig.width=8, fig.height=6, fig.align='center'}
+plot(surv_model_sex, col=c("indianred", "dodgerblue"), xlab="Survival Time", conf.int=T, ylab="Survival Rate", mark.time=T)
+legend(750, .9, c("Male", "Female"), col=c("indianred", "dodgerblue"), lwd=2, bty='n')
+```
+
+
+
+---
