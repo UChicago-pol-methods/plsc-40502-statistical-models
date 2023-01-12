@@ -778,11 +778,11 @@ $$\log\left(\frac{Pr(Y_i \le l)}{1 - Pr(Y_i \le l)}\right) = \kappa_l - X_i^{\pr
 
 class: title-slide
 
-# "Robust" inference and mis-specification
+# "Robust" inference and misspecification
 
 ---
 
-# Mis-specification
+# Misspecification
 
 - Often we'll encounter settings where we only believe *part* of the maximum likelihood model
 --
@@ -900,6 +900,48 @@ $$\widehat{Var(\hat{\theta})} = \underbrace{\bigg[-\sum_{i=1}^n h_i(Y_i|\hat{\th
   
 ---
 
+# The regression "sandwich" 
+
+- A familiar form of the sandwich arises from linear regression.
+- Remember our OLS estimator
+
+$$\hat{\beta} = (\mathbf{X}^{\prime}\mathbf{X})^{-1}(\mathbf{X}^{\prime}\mathbf{y})$$
+--
+
+- We wrote this as 
+
+$$Var(\hat{\beta}) = Var\bigg((\mathbf{X}^{\prime}\mathbf{X})^{-1}(\mathbf{X}^{\prime}\epsilon)\bigg)$$
+--
+
+- And took the variance
+
+$$\hat{\beta} = \beta + (\mathbf{X}^{\prime}\mathbf{X})^{-1}(\mathbf{X}^{\prime}\epsilon)$$
+
+---
+
+# The regression "sandwich"
+
+- We're doing inference conditional on $\mathbf{X}$
+
+$$Var(\hat{\beta}) = Var\bigg((\mathbf{X}^{\prime}\mathbf{X})^{-1}(\mathbf{X}^{\prime}\epsilon)\bigg)$$
+
+$$Var(\hat{\beta}) = (\mathbf{X}^{\prime}\mathbf{X})^{-1}(\mathbf{X}^{\prime}Var(\epsilon)\mathbf{X})(\mathbf{X}^{\prime}\mathbf{X})^{-1}$$
+--
+
+- $Var(\epsilon)$ is the variance-covariance matrix of the errors.
+  - Since the errors are mean zero, it's the expectation of the outer-product of the errors $Var(\epsilon) = E[\epsilon\epsilon^{\prime}]$
+  - Under our Gauss-Markov assumptions (specifically, independence and homoskedasticity), $Var(\epsilon) = \sigma^2\mathbf{I}$. And so
+
+---
+
+# The regression "sandwich"
+
+- Instead of making that assumption, we'll just plug in the observed residuals $\hat{\epsilon}$ as estimators of $\epsilon$
+  - This yields the classic "robust" variance estimator:
+  
+$$\widehat{Var(\hat{\beta})} = \underbrace{(\mathbf{X}^{\prime}\mathbf{X})^{-1}}_{\text{bread}}\underbrace{(\mathbf{X}^{\prime}\hat{\epsilon}\hat{\epsilon}^{\prime}\mathbf{X})}_{\text{meat}}\underbrace{(\mathbf{X}^{\prime}\mathbf{X})^{-1}}_{\text{bread}}$$
+---
+
 # Implementing sandwich SEs
 
 - Let's go back to our propensity score logistic regression of abciximab treatment on the predictive covariates
@@ -934,6 +976,22 @@ logit_sandwich_SEs
 
 ---
 
+# The Bootstrap
+
+- An alternative approach to estimating the sampling variance of any estimator via monte carlo methods is the "bootstrap"
+- **Intuitively**: Bootstrap methods use the *empirical* distribution of some random variable to estimate its unknown *theoretical* distribution
+  - Use **monte carlo** methods to approximate that empirical distribution.
+--
+
+- For regression, it is common to use the **pairs bootstrap** to obtain a heteroskedasticity-robust variance estimator (Freedman, 1981)
+  1. Start with the original sample $(Y_1, X_1), (Y_2, X_2), \dotsc, (Y_n, X_n)$
+  2. Generate a new "bootstrapped" sample of size $n$: $(Y_1^*, X_1^*), (Y_2^*, X_2^*), \dotsc, (Y_n^*, X_n^*)$ where the probability $Pr[(Y_j^*, X_j^*) = (Y_i, X_i)] = \frac{1}{n}$ for each $i$ and $j$ (sampling *with* replacement)
+  3. Compute $\hat{\beta}^*$ using the boostrapped sample $(Y_1^*, X_1^*), (Y_2^*, X_2^*), \dotsc, (Y_n^*, X_n^*)$
+  4. Repeat 2-3 a large number of times $B$ to obtain a sample of bootstrapped estimates $\hat{\beta}^{(1)}, \hat{\beta}^{(2)}, \dotsc, \hat{\beta}^{(B)}$
+  5. Use the sample moments of the bootstrapped estimates to estimate the quantities of interest (e.g. standard error; percentile intervals)
+
+---
+
 # Implementing the Bootstrap
 
 - Let's do a pairs/resampling bootstrap 
@@ -957,7 +1015,7 @@ for (i in 1:nIter){
 
 # Implementing the Bootstrap
 
-- Compare our bootstrap variance-covariance matrix to the sandwich estimator one
+- Compare our bootstrap variance-covariance matrix to the sandwich estimator
 
 ```{r}
 # Sandwich
