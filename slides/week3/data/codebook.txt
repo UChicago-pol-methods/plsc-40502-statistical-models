@@ -1,0 +1,21 @@
+state: two-letter state postal code
+
+county: the name of the county/independent city, parish (LA), town/city (CT, MA, ME, NH, RI, VT), or electoral/legislative district (AK)
+
+fipscode: 5 digit county fipscode. not unique in the New England jurisdictions
+
+fipscode2: 10 digit county fipscode. unique in New England jurisdictions
+
+office: office name. uniformly formatted for: US House, US Senate, State House, State Senate, Governor. For other offices (in the individual state files), the office names are preserved as they appear in the raw files from the Secretary of State, unless additional cleaning and reformatting was trivial.
+
+district: 'statewide' for any office that appeared on the ballot in every county in the state. otherwise the numeric or alphanumeric district code. this variable is always cleaned up for US House, State House, and State Senate. if creating the district variable for other districted offices was trivial, then it appears in this column. otherwise the district information is preferenced in the 'office' column and the 'district' is blank
+
+total.vote: total number of votes in this office for all candidates appearing in the long file (may not be the official, certified total votes if write-ins counts were not included in the raw vote count data. but since those numbers are always low, this total.votes variable should allow you to produce candidate vote percentages that are extremely close to their true percentage)
+
+party [only long version]: uniformly formatted for Democrat, Republican, Libertarian, Green (and some other smaller) Parties (see the notes for additional information about New York)
+	
+candidate [only long version]: candidate name. in ballot measure or retention elections it's the choice name (yes, no, for, against, etc.). if the candidate is a write-in, the words '(write-in)' follow their name. the 
+
+votes [only long version]: number of votes this candidate received in this race
+
+dem/rep/other [only wide version]: number of votes received by each party in this election. if there are multiple Democrats or Republicans in a race (as in California or Louisiana), their votes are pooled together. all non-Democrat, non-Republican candidates (and write-in D's and R's) are included in the 'other' column. see the notes file for specific information about New York.

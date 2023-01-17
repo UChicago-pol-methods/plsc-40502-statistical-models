@@ -1,0 +1,523 @@
+---
+title: "Week 3: Intro to Bayesian Inference"
+subtitle: "PLSC 40502 - Statistical Models"
+# author: "Anton Strezhnev"
+output: 
+  xaringan::moon_reader:
+    self_contained: true
+    css: [default, uchicago_pol_meth.css]
+    nature:
+      highlightLines: true
+      ratio: '16:9'
+      
+---
+class: title-slide
+
+# Review
+$$
+  \require{cancel}
+  \DeclareMathOperator*{\argmin}{arg\,min}
+$$
+  
+```{r, echo = F, message=F, warnings=F}
+library(tidyverse)
+library(haven)
+library(estimatr)
+library(knitr)
+
+options(digits=3)
+
+```
+
+---
+
+# Previously
+
+$$
+  \DeclareMathOperator*{\argmax}{arg\,max}
+$$
+
+- **Generalized Linear Models**
+  - Extending our **linear predictor** $X_i^{\prime}\beta$ to non-linear transformations of the CEF
+  - **Three** elements: A distribution for $Y_i$, a linear predictor, and a link function $g()$: $g(E[Y_i | X_i]) = X_i^{\prime}\beta$
+  - Estimation via Maximum Likelihood - nicely-behaved likelihoods when $Y_i$ is in the exponential family.
+--
+
+-  **Robust** inference:
+  - Can we still do inference on $\beta$ in a GLM when the model is mis-specified?
+  - In many cases $\hat{\beta}$ is consistent for $\beta$ but the MLE is not efficient and its variance does not approach the C-R lower bound.
+  - "Sandwich" estimator using the estimated gradient.
+
+---
+
+# This week
+
+- **Bayesian inference**
+  - What happens when we define a distribution for our "beliefs" about $\theta$
+  - How do we obtain the **posterior** distribution $\theta | \mathbf{Y}$?
+--
+
+- **Defining a Bayesian Model**
+  - Writing down the data-generating process
+  - "Plate notation" for concise model summaries
+--
+
+- **Estimation** via computation
+  - Most posterior distributions can't be expressed in closed form
+  - But we can construct an algorithm to **sample** from that distribution
+  - Metropolis-Hastings algorithm - "Gibbs sampling" as a special case
+
+---
+class: title-slide
+
+# Intro to Bayesian Inference
+
+---
+
+# Bayesian inference
+
+- In the **frequentist** paradigm, we took a particular approach to thinking about *randomness* when trying to learn about an unknown parameter $\theta$ using observed data $\mathbf{Y}$
+  - $\theta$ is an unknown **constant**
+  - $\mathbf{Y}$ are random variables
+  - $\hat{\theta}$ is our estimator of $\theta$ - it's a function of random random variables
+  - Probabilities reflect behavior in *repeated samples*
+--
+
+- **Bayesian** inference takes a different approach to the problem. Rather than treating $\theta$ as a constant, we consider it to be **random** as well!
+  - Probabilities reflect **beliefs** about a particular quantity
+  - $f(\theta)$ denotes our *prior* beliefs about the value of $\theta$
+  - $f(\theta | \mathbf{Y})$ is the *posterior* distribution given the observed data. This is our target of inference
+  - $\mathbf{Y}$ are still random variables...but the posterior distribution *conditions* on them
+--
+
+- We derive the posterior using **Bayes rule**
+
+$$f(\theta | \mathbf{Y}) = \frac{f(\mathbf{Y} | \theta)}{f(\mathbf{Y})} f(\theta)$$
+---
+
+# Bayesian inference
+
+- The denominator can be written as an integral over all of the possible values of $\theta$ (marginalizing over $\theta$)
+
+$$f(\mathbf{Y}) = \int f(\mathbf{Y},\theta)d\theta = \int f(\mathbf{Y}|\theta)f(\theta)d\theta$$
+--
+
+- So often we'll write the posterior distribution *up to a proportionality constant* as
+
+$$\underbrace{f(\theta | \mathbf{Y})}_{\text{posterior}} \propto \underbrace{f(\mathbf{Y} | \theta)}_{\text{likelihood}} \times \underbrace{f(\theta)}_{\text{prior}}$$
+
+--
+
+- In addition to the posterior distribution of the parameters $\theta$, we'll often want to generate "forecasts" of an out-of-sample $\tilde{Y}$ conditional on what we have observed
+  - This involves integrating over the posterior values of the parameter $\theta$
+
+$$\begin{align*}f(\tilde{Y}|\mathbf{Y}) &= \int f(\tilde{Y}, \theta | \mathbf{Y}) d\theta\\
+&= \int f(\tilde{Y}| \theta, \mathbf{Y}) f(\theta | \mathbf{Y}) d\theta\\
+&= \int f(\tilde{Y}| \theta) f(\theta | \mathbf{Y}) d\theta\end{align*}$$
+
+---
+
+# Bayesian inference
+
+- We also might reason about two different values of $\theta$: $\{\theta_1, \theta_2\}$ and their relative odds. This has a nice expression in terms of the *prior* times a *likelihood ratio* 
+
+$$\frac{f(\theta_1|\mathbf{Y})}{f(\theta_2|\mathbf{Y})} = \frac{f(\theta_1)}{f(\theta_2)} \times  \frac{f(\mathbf{Y}|\theta_1)}{f(\mathbf{Y}|\theta_2)} $$
+--
+
+- Inference on the posterior is often referred to as **updating** the prior and often can be conceptualized in terms of *sequential* changes to our beliefs about the parameter. 
+--
+
+- Suppose we have two samples $\mathbf{Y}_1$ and $\mathbf{Y}_2$. Our posterior can be written as:
+  
+$$\begin{align*}f(\theta | \mathbf{Y}_1, \mathbf{Y}_2) &\propto f(\mathbf{Y}_2, \mathbf{Y}_1 | \theta) \times f(\theta) \\ &\propto f(\mathbf{Y}_2 | \mathbf{Y}_1, \theta) \times f(\mathbf{Y}_1 | \theta) \times f(\theta) \\ &\propto f(\mathbf{Y}_2 | \mathbf{Y}_1, \theta) \times f(\theta | \mathbf{Y}_1) \end{align*}$$
+
+--
+
+- The posterior becomes the new "prior"!
+
+---
+
+# Application: Predicting Elections
+
+- We'd like to predict U.S. House of Representatives elections using data from the prior Presidential election at the county level
+  - *Pettigrew (2018)* assembled the 2018 US House returns at the county level
+  - Available as `us-house-wide.csv` on the Course Github
+--
+
+- For each county $i$, $i \in \{1, 2, \dotsc, N\}$, we observe:
+  - $Y_i$: The number of votes for the Democratic candidate county 
+  - $n_i$: The number of votes cast in total in that county
+--
+
+- Let's start by building a simple model and going from there.
+  - Assume $Y_i$ is a draw from a binomial distribution with a total number of of trials $K_i$ and "success" probability $\pi$.
+  - $\pi_i$ comes from a **Beta** distribution with *hyperparameters* $\alpha_0$ and $\beta_0$
+
+$$Y_i \sim \text{Binomial}(n_i, \pi_i)$$
+$$\pi_i \sim \text{Beta}(\alpha_0, \beta_0)$$
+
+---
+
+# Plate notation
+
+- A common method of writing statistical models is via **plate notation** 
+  - These concisely encode independence and dependence assumptions across parameters and data.
+
+```{tikz, dag, echo=F, fig.align='center'}
+\usetikzlibrary{arrows}
+\usetikzlibrary{bayesnet}
+\begin{tikzpicture}
+\node[obs] (y) {$Y_i$};
+\node[const, above=of y, xshift=-.5cm] (k) {$n_i$};
+\node[latent, above=of y, xshift=.5cm] (pi) {$\pi_i$};
+\node[const, right=of pi, yshift=.5cm] (alpha) {$\alpha_0$};
+\node[const, right=of pi, yshift=-.5cm] (beta) {$\beta_0$};
+\edge{k}{y};
+\edge{pi}{y};
+\edge{alpha}{pi};
+\edge{beta}{pi};
+\plate [inner sep=.3cm] {plate1} {(k) (y) (pi)} {$N$};
+\end{tikzpicture}
+```
+
+---
+
+# Features of a Bayesian model
+
+- There are four types of variables in a Bayesian model
+  - **Observed Data**: Variables that have a probability distribution but on whose observed values we condition - $Y_i$
+  - **Known Constants**: Fixed quantities that do not have probability distributions (e.g. regressors or other features of the nodes) - $n_i$, $N$, $\alpha_0$, $\beta_0$
+  - **Deterministic quantities**: Transformations of other variables
+  - **Latent parameters**: Variables that have a probability distribution that we do not observe - $\pi_i$
+--
+
+- Sometimes the known constants are *actually* known by us (e.g. $N$ or $n_i$) and in other cases they are *assumed to be known*
+  - These are typically parameters of the prior distribution which are called **hyperparameters** (here: $\alpha_0$ and $\beta_0$)
+  - The hyperparameters govern the distribution of the prior -- crucially, its mean and variance.
+--
+
+- In Bayesian inference, we are interested in obtaining either the posterior of the latent parameters *or* integrating them out (in the latter case, they are sometimes referred to as "nuisance" parameters)
+  - Here, we want to obtain $f(\pi_i | \mathbf{Y})$
+  - When writing the posterior, we'll often omit the implicit conditioning on the observed constants.
+
+---
+
+# The Likelihood
+
+- Remember the posterior distribution is proportional to the **likelihood** times the **prior**
+
+$$\underbrace{f(\pi_i | \mathbf{Y})}_{\text{posterior}} \propto \underbrace{f(\mathbf{Y} | \pi_i)}_{\text{likelihood}} \times \underbrace{f(\pi_i)}_{\text{prior}}$$
+
+--
+
+- First, let's derive the **likelihood** $f(\mathbf{Y} | \pi_i)$
+  - Since the $Y_i$ are independent conditional on $\pi_i$, we can write:
+  
+$$f(\mathbf{Y} | \pi_i) = \prod_{j=1}^N f(Y_j | \pi_i)$$
+--
+
+- Next, for $j \neq i$, we have $f(Y_j | \pi_i) = f(Y_j)$ since $Y_j$ only depends on $\pi_j$. That's just a constant term and drops out of the posterior distribution, leaving
+
+$$f(\pi_i | \mathbf{Y}) = f(\pi_i | Y_i) \propto f(Y_i | \pi_i) f(\pi_i)$$
+---
+
+# The Likelihood and Prior
+  
+- What's $f(Y_i | \pi_i)$? We've defined it as the binomial PMF
+
+$$f(Y_i | \pi_i) = {n_i \choose Y_i} \pi_i^{Y_i}(1- \pi_i)^{n_i - Y_i}$$
+--
+
+- What about the prior? $f(\pi_i)$? We've chosen the **beta** distribution
+
+$$f(\pi_i) = \frac{\Gamma(\alpha_0)\Gamma(\beta_0)}{\Gamma(\alpha_{0} + \beta_{0})} \pi_i^{\alpha_0 - 1}(1- \pi_i)^{\beta_0 - 1}$$
+--
+
+- The Beta distribution has some notable features.
+  - It's mean: $E[\pi_i] = \frac{\alpha_0}{\alpha_0 + \beta_0}$
+  - It's variance $Var(\pi_i) = \frac{\alpha_0\beta_0}{(\alpha_0 + \beta_0)^2(\alpha + \beta + 1)}$
+
+---
+
+# The Beta Distribution
+
+- Let's see how the parameters influence the shape of the beta. $\text{Beta}(2,2)$:
+
+```{r, echo=F, fig.width=5, fig.height = 3, fig.align="center"}
+beta_22 <- ggplot() + xlim(0, 1) + geom_function(fun=dbeta, args=list(shape1=2, shape2=2)) + theme_bw() + xlab("Value") + 
+  ylab("Density") + ggtitle("Beta(2,2)") 
+beta_22
+```
+--
+
+- $\text{Beta}(100,200)$:
+
+```{r, echo=F, fig.width=5, fig.height = 3, fig.align="center"}
+beta_100200 <- ggplot() + xlim(0, 1) + geom_function(fun=dbeta, args=list(shape1=100, shape2=200)) + theme_bw() + xlab("Value") + 
+  ylab("Density") + ggtitle("Beta(100,200)") 
+beta_100200
+```
+
+---
+
+# Choosing a prior
+
+- There are two ways to think about choosing a prior distribution
+  - **Informative** prior - Use the prior to encode our existing beliefs about the parameter
+  - **Uninformative/Diffuse** prior - Pick a prior that will have the least impact on the posterior distribution
+--
+
+- We also need to consider the *shape* of the prior distribution $f(\pi_i)$
+  - Why did we pick the Beta distribution?
+  - Because it has a special property when combined with a binomial likelihood. It is a **conjugate** prior to the binomial likelihood.
+--
+
+- **Conjugate prior**: A prior distribution is *conjugate* to a particular likelihood if the posterior distribution is of the same form as the prior
+  - $f(\theta)$ is beta; $f(\mathbf{Y} | \theta)$ is binomial; $f(\theta | \mathbf{Y})$ is beta
+  
+---
+
+# Choosing a prior
+
+- In this case, $\pi_i$ must be between $0$ and $1$, so we already have some information.
+- One possible choice for an *uninformative* prior is the uniform distribution - each parameter value is equally likely: $$f(\pi_i) \propto 1$$
+  - In settings where the parameter takes on values $(-\infty, \infty)$, we could still consider a "uniform" prior but it will be **improper** as it's not a density that integrates to $1$
+--
+
+- For $\pi_i \in (0, 1)$, the uniform prior corresponds to the $\text{Beta}(1,1)$ distribution
+  - Originally proposed by Bayes.
+
+---
+
+# Choosing a prior
+
+- Haldane proposed instead $Beta(0,0)$ - notably this is *improper*
+
+```{r, echo=F, fig.width=5, fig.height = 3, fig.align="center"}
+beta_00<- ggplot() + xlim(0, 1) + ylim(0, 4) + geom_function(fun=dbeta, args=list(shape1=0, shape2=0)) + theme_bw() + xlab("Value") + 
+  ylab("Density") + ggtitle("Beta(0,0)") 
+beta_00
+```
+
+- And Jeffreys proposed $\text{Beta}(.5, .5)$
+
+```{r, echo=F, fig.width=5, fig.height = 3, fig.align="center"}
+beta_55 <- ggplot() + xlim(0, 1) + ylim(0, 4) + geom_function(fun=dbeta, args=list(shape1=1/2, shape2=1/2)) + theme_bw() + xlab("Value") + 
+  ylab("Density") + ggtitle("Beta(.5,.5)") 
+beta_55
+```
+
+---
+
+# The posterior density
+
+- We've mentioned that $f(\pi_i | Y_i)$ is a beta distribution -- let's show that!
+
+$$f(\pi_i | \mathbf{Y}) \propto f(Y_i | \pi_i) f(\pi_i)$$
+--
+
+- Plug in the densities (we'll drop any multiplicative constants that don't depend on $\pi_i$)
+
+$$f(\pi_i | \mathbf{Y}) \propto \left[\pi_i^{Y_i}(1- \pi_i)^{n_i - Y_i}\right]\times\left[\pi_i^{\alpha_0 - 1}(1- \pi_i)^{\beta_0 - 1}\right]$$
+--
+
+- Adding the exponents
+
+$$f(\pi_i | \mathbf{Y}) \propto \pi_i^{Y_i + \alpha_0 - 1}(1- \pi_i)^{n_i - Y_i + \beta_0 - 1}$$
+
+--
+
+- And we can recognize this as the **kernel** of the beta distribution with parameters $\alpha = Y_i + \alpha_0$ and $\beta = n_i - Y_i + \beta_0$
+
+---
+
+# Quantities of interest
+
+- Once we have a posterior distribution, we typically will report **summaries** in the style of our typical frequentist point and interval estimates.
+  - Note, however, that these have a different interpretation in the Bayesian framework.
+--
+
+- **Point** summaries
+  - *Posterior Mean*: $\hat{\theta} = E[\theta | \mathbf{Y}]$
+  - *Posterior Mode*: $\hat{\theta} = \argmax_{\theta} p(\theta | \mathbf{Y})$
+--
+
+- **Credible interval**: A $95\%$ credible interval $(l_{95}, h_{95})$ is a range of values that contains $95\%$ of the posterior density
+
+$$\int_{l_{95}}^{h_{95}} f(\theta | \mathbf{Y})d\theta = .95$$
+-- 
+
+- There is no one unique credible interval! As a result, there are a few common choices for how to construct a credible interval
+  - **Highest Density** interval (HDI) - no values outside of the interval have higher density than values *inside* the interval
+  - **Equal-tailed** interval (ETI) - the probability of being below the lower limit is equal to the probability above the upper limit
+  
+---
+
+# Application
+
+- Let's take a look at the elections data. Start by loading it in
+
+```{r, message = F, warning=F}
+elections <- read_csv("data/us-house-wide.csv")
+```
+
+--
+
+- One feature of this county-level House data is that because House districts don't perfectly overlap counties, we have some county-district combinations with very few voters!
+  - Consider my home county: **Hennepin County, MN**
+
+```{r}
+hennepin <- elections %>% filter(county == "Hennepin")
+print(hennepin)
+```
+
+- MN-6 only has 475 votes from Hennepin County.
+
+---
+
+# Application
+
+- Let's get the posterior distribution for $\pi_i$ for MN-6 in Hennepin County under an uninformative uniform prior
+
+```{r, fig.width=5, fig.height = 3, fig.align="center"}
+mn6_hennepin <- elections %>% filter(state=="MN"&county == "Hennepin"&district == 6)
+posterior_alpha <- mn6_hennepin$dem + 1
+posterior_beta <- mn6_hennepin$total.votes - mn6_hennepin$dem + 1
+# Plot the posterior
+mn6_posterior <- ggplot() + xlim(.3, .5)  + geom_function(fun=dbeta, args=list(shape1=posterior_alpha, shape2=posterior_beta)) + theme_bw() + xlab(expression(pi)) + 
+  ylab("Density")
+mn6_posterior
+```
+
+---
+
+# Application
+
+- We know the form of the beta mean, so our posterior mean estimate is 
+```{r}
+posterior_mean <- posterior_alpha/(posterior_alpha + posterior_beta)
+posterior_mean
+```
+--
+
+- And we can obtain an equal-tailed 95% credible interval simply via the quantile function
+
+```{r}
+posterior_ci <- c(qbeta(.025, shape1=posterior_alpha, shape2=posterior_beta), qbeta(.975, shape1=posterior_alpha, shape2=posterior_beta))
+posterior_ci
+```
+
+---
+
+# Application
+
+- But we have some more information from the other counties in the district
+
+```{r}
+mn6 <- elections %>% filter(state=="MN"&district == 6)
+mn6
+```
+--
+
+- What if we instead constructed our prior such that its mean was centered on the average of all the other counties?
+  - We can control the strength of the prior via the prior variance
+
+---
+
+
+# Application
+
+```{r}
+prior_mean <- sum(mn6 %>% filter(county != "Hennepin") %>% pull(dem))/sum(mn6 %>% filter(county != "Hennepin") %>% pull(total.votes))
+prior_variance <- (prior_mean*(1-prior_mean))/1000
+# Convert these to alpha/beta 
+prior_alpha <- (((1 - prior_mean)/prior_variance) - (1/prior_mean))*prior_mean^2
+prior_beta <- prior_alpha*(1/prior_mean - 1)
+```
+
+---
+
+# Application
+
+- Let's plug-in the new prior parameters
+
+```{r}
+posterior2_alpha <- mn6_hennepin$dem + prior_alpha
+posterior2_beta <- mn6_hennepin$total.votes - mn6_hennepin$dem + prior_beta
+# Plot the posterior
+mn6_posterior2 <- ggplot() + xlim(.3, .5)  +  geom_function(fun=dbeta, args=list(shape1=posterior_alpha, shape2=posterior_beta), lty=2, lwd=1.5, col="dodgerblue") + 
+  theme_bw() + xlab(expression(pi)) + 
+  ylab("Density") + geom_vline(xintercept=prior_mean, lty=2, lwd=1.5, col="indianred") +
+  geom_function(fun=dbeta, args=list(shape1=posterior2_alpha, shape2=posterior2_beta),lwd=1.5) 
+```
+
+---
+# Application
+
+- Let's plug-in the new prior parameters
+
+```{r, fig.width=7, fig.height = 5, fig.align="center"}
+mn6_posterior2
+```
+
+---
+
+# Application
+
+--
+
+- Our new posterior mean
+
+```{r}
+posterior2_mean <- posterior2_alpha/(posterior2_alpha + posterior2_beta)
+posterior2_mean
+```
+
+- And 95% credible interval
+
+```{r}
+posterior2_ci <- c(qbeta(.025, shape1=posterior2_alpha, shape2=posterior2_beta), qbeta(.975, shape1=posterior2_alpha, shape2=posterior2_beta))
+posterior2_ci
+```
+
+---
+
+# Application
+
+- The posterior mean can be thought of as a "weighted average" of the prior mean and the MLE
+  - The weights are controlled by the variance of the prior.
+  - Can interpret the hyper-parameters for this case - $\alpha_0$ and $\beta_0$ - as the number of "previously observed" counts.
+--
+
+- Stronger priors $\leadsto$ narrower credible intervals
+  - But it takes a *lot* more data to move the posterior distribution from the prior.
+
+--
+
+- Often the prior serves to **regularize** our estimates
+  - We want our estimates to be "pulled" towards a particular value if there's very little data.
+  - A common type of "regularizing" prior is designed to attenuate our estimates to $0$ - we'll talk about this when we get to Week 8!
+
+---
+
+# Connections with Frequentism
+
+- You'll notice that for the uninformative uniform prior, our posterior mode is equivalent to the MLE
+  - If $f(\theta) \propto 1$, $f(\theta|\mathbf{Y}) = f(\mathbf{Y}|\theta)$
+--
+
+- More generally, for most well-behaved priors and likelihoods, the **Bernstein-von Mises** theorem states that as $n \to \infty$...
+  - ...the posterior distribution $f(\theta | \mathbf{Y})$ will converge to a **normal** distribution
+  - ...centered at the true parameter $\theta_0$
+  - ...with variance-covariance matrix equal to the inverse Fisher information
+--
+
+- Essentially: In large samples, posterior distributions converge to the sampling distribution of the MLEs
+
+---
+
+class: title-slide
+
+# Bayesian Regression
+
+---
