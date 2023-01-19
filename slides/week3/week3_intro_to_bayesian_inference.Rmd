@@ -518,6 +518,348 @@ posterior2_ci
 
 class: title-slide
 
+# Markov-Chain Monte Carlo
+
+---
+
+# Markov-Chain Monte Carlo
+
+- In many settings, we have this problem in computing the posterior
+
+$$f(\theta | \mathbf{Y}) = \frac{\overbrace{f(\mathbf{Y}|\theta)}^{\text{Easy!}} \times \overbrace{f(\theta)}^{\text{Easy!}}}{\underbrace{f(\mathbf{Y})}_{\textbf{HARD!}}}$$
+
+- The **prior** $f(\theta)$ has a known distribution (sometimes up to a proportionality constant)
+- The **likelihood** $f(\mathbf{Y} \ \theta)$ has a known distribution specified by our data-generating process
+- In general, we write our model so that the joint density of the data and the parameters $f(\mathbf{Y}, \theta) = f(\mathbf{Y} | \theta) f(\theta)$ factors very neatly
+--
+
+- But $f(\mathbf{Y})$ is a tough to evaluate integral!
+
+$$f(\mathbf{Y}) = \int f(\mathbf{Y},\theta)d\theta$$
+--
+
+- We've used the trick of having a **conjugate prior** which lets us know the distribution of the posterior
+  - More generally, we've often been able to inspect $f(\mathbf{Y} | \theta) \times f(\theta)$ to identify its distributional form.
+  
+---
+
+# Markov-Chain Monte Carlo
+
+- Markov-Chain Monte Carlo methods allow us to generate a sample of observations from the target posterior **even when we don't know it** as long as we can evaluate a function that is **proportional** to the posterior
+  - **Monte Carlo**: Use repeated samples to obtain numeric approximations of key quantities
+  - **Markov-Chain**: The samples from the posterior are constructed via a "chain" that has the Markov property
+--
+
+- **Our Goal**: Generate a monte carlo sample $\{\theta^{(1)}, \theta^{(2)}, \theta^{(3)}, \dotsc \}$ of arbitrary length such that the sequence of draws **converges** to a **stationary distribution** that is the target posterior
+--
+
+- This sample is a **markov chain** in that the distribution of the $(i+1)$th draw depends on the value of the $i$th, but only on that past value
+
+$$f(\theta^{(i+1)} | \mathbf{Y},  \theta^{(i)}, \theta^{(i-1)}, \dotsc, \theta^{(1)}) =  f(\theta^{(i+1)} | \mathbf{Y},  \theta^{(i)})$$
+--
+
+- Important note: our samples from the target posterior will be **dependent**
+
+--
+
+---
+
+# Metropolis-Hastings Algorithm
+
+- The foundational algorithm for generating MCMC samples is the **Metropolis-Hastings** algorithm.
+  - **Crucially**: We can sample from almost *any* distribution (though some distributions are better than others)
+--
+
+- The algorithm relies on two key concepts to generate another sample $\theta^{(i+1)}$ given the past sample value $\theta^{(i)}$:
+  - The **proposal distribution** - A probability distribution $f(\theta^{(i+1)} | \theta^{(i)})$ that generates our "proposal" value
+  - The **acceptance probability** - A calculation for the probability of "accepting" the proposed value or rejecting it
+  
+---
+
+# Metropolis-Hastings Algorithm
+
+- To generate the markov chain of $M$ samples from the target posterior distribution $\{\theta^{(1)}, \theta^{(2)}, \theta^{(3)}, \dotsc, \theta^{(M)}\}$, the **Metropolis-Hastings** algorithm iterates between two steps:
+
+1. **Proposal**: Conditional on the current value $\theta$, generate a draw $\theta^*$ from $Q(\theta^* | \theta)$ where $Q$ is the proposal distribution.
+2. **Accept/Reject**: With probability $\alpha$, "accept" the proposal and set $\theta^{(i+1)} = \theta^*$ - otherwise "reject" and set $\theta^{(i+1)} = \theta$
+
+$$\alpha = \min\bigg\{1, \frac{f(\mathbf{Y}|\theta^*)f(\theta^*)}{f(\mathbf{Y}|\theta)f(\theta)} \times \frac{Q(\theta | \theta^*)}{Q(\theta^* | \theta)} \bigg\}$$
+
+--
+
+- **Intuitively** - If the proposal distribution is symmetric...
+  - ...if the unnormalized posterior density is higher at the proposed rather than the current location, **always accept**
+  - ...if the unnormalized posterior density is lower at the proposed rather than current location, **maybe accept**
+  
+---
+
+# Proposal Distribution
+
+- Our choice of $Q$ governs how quickly the Markov Chain will "converge" to the true posterior
+  - We want to choose a proposal distribution that could "eventually" propose each value in the domain of $\theta$
+  - We also want a proposal distribution that generates a high acceptance probability $\alpha$
+--
+
+- It is common to choose a proposal distribution that is **symmetric** such that $$\frac{Q(\theta | \theta^*)}{Q(\theta^* | \theta)} = 1$$
+--
+
+- For $\theta \in (-\infty, \infty)$, common to propose $\theta^*$ from a $\text{Normal}(\theta, \Omega)$ 
+  - That is, from a normal distribution centered on the "current" parameter with an arbitrarily chosen variance $\Omega$
+  - This is **symmetric** since the chances of proposing $\theta^*$ from $\theta$ are the same as the chances of proposing $\theta$ from $\theta^*$
+
+---
+
+# Proposal Distribution
+
+- Another alternative would be a $\text{Uniform}(\theta - \Delta, \theta + \Delta)$
+  - Uniform distribution centered at $\theta$ where every value in the interval has density $\frac{1}{2\Delta}$
+--
+
+- For parameters that are constrained to $(0, 1)$, a simple choice would be to sample from the $$\text{Uniform}(0,1)$$
+  - Trivially symmetric since it doesn't depend at all on $\theta$
+  - But likely to generate bad proposals!
+  
+--
+
+- We're usually better off transforming our parameter to an unconstrained value and sampling there
+  
+---
+
+# Proposal Distribution
+
+- To get some intuition, it's worth considering the case where somehow we could generate independent samples from the true posterior and 
+
+$$Q(\theta^*|\theta) = f(\theta^* | \mathbf{Y})$$
+--
+
+- What is our acceptance probability in this scenario?
+
+$$\frac{f(\mathbf{Y}|\theta^*)f(\theta^*)}{f(\mathbf{Y}|\theta)f(\theta)} \times \frac{f(\theta|\mathbf{Y})}{f(\theta^*|\mathbf{Y})} = \frac{f(\theta^*|\mathbf{Y})f(\mathbf{Y})}{f(\theta|\mathbf{Y})f(\mathbf{Y})} \times \frac{f(\theta|\mathbf{Y})}{f(\theta^*|\mathbf{Y})} = 1$$
+
+--
+
+- If we were somehow proposing from the true posterior distribution, Metropolis-Hastings would **always accept** each proposal!
+
+---
+
+# Illustration
+
+- Let's go back to our posterior distribution for the Democratic vote share in the part of MN-6 that is in Hennepin County
+
+```{r, fig.width=5, fig.height = 3, fig.align="center"}
+mn6_hennepin <- elections %>% filter(state=="MN"&county == "Hennepin"&district == 6)
+posterior_alpha <- mn6_hennepin$dem + 1
+posterior_beta <- mn6_hennepin$total.votes - mn6_hennepin$dem + 1
+# Plot the posterior
+mn6_posterior <- ggplot() + xlim(.3, .5)  + geom_function(fun=dbeta, args=list(shape1=posterior_alpha, shape2=posterior_beta)) + theme_bw() + xlab(expression(pi)) + 
+  ylab("Density")
+mn6_posterior
+```
+
+- In this case, we calculated the posterior directly since it was beta, but suppose we couldn't?
+
+---
+
+# Illustration
+
+- Let's construct our MCMC sampler. First, let's choose a proposal distribution
+  - For $\pi_i \in (0, 1)$, we could use a Beta, but the Beta isn't symmetric
+  - $\text{Uniform}(0, 1)$ would generate a lot of bad proposals
+--
+
+- Instead, let's transform $\pi_i$ to be unbounded. Define $\theta_i = \log\bigg(\frac{\pi_i}{1-\pi_i}\bigg)$ 
+  - We'll sample $\theta$s and convert them back to $\pi$ when we evaluate the likelihood and prior
+  - An intuitive distribution $Q(\theta^* | \theta)$ would be the standard logistic distribution centered on $\theta$. It's **symmetric**!
+
+---
+
+# Illustration
+
+```{r, cache=T}
+set.seed(60637)
+logistic <- function(x) 1/(1 + exp(-x)) # Helper Function
+logit <- function(x) log(x/(1-x))
+M <- 100000  # Number of MCMC samples
+pi_mcmc <- rep(NA, M) # Vector to store our samples
+pi_mcmc[1] <- .5 # Pick a starting value
+```
+
+---
+
+# Illustration
+
+```{r, cache=T}
+for (i in 1:(M-1)){ # For i in 1:(M-1)
+  ## Step 1 - Proposal
+  theta_i <- logit(pi_mcmc[i])
+  theta_star <- rlogis(1, location = theta_i)
+  ## Step 2 - Accept/Reject
+  lik_star <- dbinom(mn6_hennepin$dem, mn6_hennepin$total.votes, prob = logistic(theta_star)) 
+  prior_star <- dbeta(logistic(theta_star), shape1 = 1, shape2=2)
+  lik_current <-  dbinom(mn6_hennepin$dem, mn6_hennepin$total.votes, prob = logistic(theta_i)) 
+  prior_current <- dbeta(logistic(theta_i), shape1 = 1, shape2=2)
+  Q_star_current <- dlogis(theta_star, location=theta_i) # This is all optional b/c of symmetry
+  Q_current_star <- dlogis(theta_i, location=theta_star)
+  #Assemble the acceptance ratio
+  ar <- ((lik_star*prior_star)/(lik_current*prior_current))*(Q_current_star/Q_star_current)
+  # Choose to accept or reject
+  accept <- rbinom(1,1,min(1,ar))
+  # Store the next value
+  pi_mcmc[i+1] <- logistic(theta_star)*accept + logistic(theta_i)*(1-accept)
+}
+```
+
+---
+
+# Illustration
+
+- Let's first see how the chain progresses by generating the **trace plot**
+
+```{r, fig.align="center", fig.height=3, fig.width=6}
+plot(y=pi_mcmc, x=1:length(pi_mcmc), xlab="Iteration", ylab="pi", type="l")
+```
+
+- You'll see that it takes a bit for the chain to reach the area of the posterior with the most mass
+  - If we started closer to the "mass" of the distribution, we would have converged faster
+- In practice, we will throw away some number of our initial samples as a **burn-in** period, since we know that the chain needs some time to reach the stationary distribution. 
+  - Here we'll drop the first $5000$ samples and keep the rest 
+
+---
+
+# Illustration
+
+- Our ideal trace plots have no clear trends - in such a case, we consider the chain to have reached its stationary distribution
+
+```{r fig.align="center", fig.height=4, fig.width=7}
+pi_mcmc_use <- pi_mcmc[5000:M] # Toss our burn-in period
+plot(y=pi_mcmc_use, x=1:length(pi_mcmc_use), xlab="Iteration", ylab="pi", type="l")
+```
+
+- Note that trace plots are **diagnostics** -- they don't prove that the chain has "mixed," but a lot of jumps or stagnant periods would suggest that our chain needs to run longer (or we need to choose a better proposal distribution!)
+
+---
+
+# Illustration
+
+```{r,fig.align="center", fig.height=5, fig.width=7}
+# Plot the histogram on top of the "true" distribution
+mn6_mcmc <- data.frame(x=pi_mcmc_use) %>% ggplot(aes(x=x)) +  theme_bw() + xlab(expression(pi)) + geom_histogram(aes(y=after_stat(density)), bins=50) + geom_function(fun=dbeta, args=list(shape1=posterior_alpha, shape2=posterior_beta), col="indianred", lwd=2) +
+  ylab("Density")
+mn6_mcmc
+```
+
+---
+
+# Illustration
+
+- We can compute summaries like the posterior mean or a 95% credible interval by taking summaries of the MCMC sample
+
+```{r}
+posterior_mcmc_mean <- mean(pi_mcmc_use)
+posterior_mcmc_mean
+posterior_mean
+```
+
+---
+
+# Illustration
+
+- We get very close to the true posterior (and can get closer with more iterations)
+
+```{r}
+posterior_mcmc_ci <- quantile(pi_mcmc_use, c(.025, .975))
+posterior_mcmc_ci
+posterior_ci
+```
+
+---
+
+# Multiple parameters
+
+- In this example, we've focused on estimating a single parameter. Suppose instead we have $K$ parameters: $\theta = \{\theta_1, \theta_2, \theta_3, \dotsc, \theta_K\}$
+- With multiple parameters, we'd need a multivariate proposal distribution (like a multivariate normal)
+  - But this can be hard and mixing is often very slow with multivariate proposals.
+--
+
+- Instead, we can use **Gibbs sampling** -- generating each update $\theta^{(i+1)}_k$ conditional on the other current values of the other parameters $\theta^{(i)}_{-k}$
+  - Importantly, if we **can** sample from the conditional distribution $\theta_k | \theta_{k-1}, \mathbf{Y}$ we can get proposals with acceptance probability 1
+  - Even if we can't, we can use a M-H step for that parameter
+
+---
+
+# Gibbs Sampling
+
+- The **Gibbs sampling** algorithm generates updates $\theta^{(i+1)} = \{\theta^{(i+1)}_1, \theta^{(i+1)}_2, \theta^{(i+1)}_3, \dotsc, \theta^{(i+1)}_K\}$ by sampling in sequence:
+
+$$\begin{align*}\theta_1^{(i+1)} &:= \theta^*_1 \sim f(\theta_1 | \mathbf{Y}, \theta_2^{(i)}, \theta_3^{(i)}, \dotsc \theta_K^{(i)})\\
+ \theta_2^{(i+1)} &:= \theta^*_2 \sim f(\theta_2 | \mathbf{Y}, \theta_1^{(i+1)}, \theta_3^{(i)}, \dotsc \theta_K^{(i)})\\
+ &\vdots\\
+  \theta_k^{(i+1)} &:= \theta^*_k \sim f(\theta_k | \mathbf{Y}, \theta_1^{(i+1)}, \theta_2^{(i+1)}, \dotsc \theta_{k-1}^{(i+1)},\theta_{k+1}^{(i)} \dotsc, \theta_K^{(i)})\\
+   &\vdots\\
+  \theta_K^{(i+1)} &:= \theta^*_K \sim f(\theta_K | \mathbf{Y}, \theta_1^{(i+1)}, \theta_2^{(i+1)}, \dotsc \theta_{K-1}^{(i+1)})\end{align*}$$
+  
+--
+
+- **Important**: Sampling from the conditionals $f(\theta_k | \theta_{-k}, \mathbf{Y})$ is often easier to do than sampling from the marginal distribution $f(\theta_k | \mathbf{Y})$.
+  - In fact, we'll often introduce latent variables to make a Gibbs sampling algorithm work where it otherwise wouldn't. This is called **data augmentation**
+
+---
+
+# Gibbs Sampling
+
+- To see why sampling from the conditionals works, consider the implied MH acceptance probability when we treat the conditional distribution $f(\theta_{k} | \theta_{-k}^{(i)} , \mathbf{Y})$ as the proposal distribution $Q$
+
+$$\alpha = \frac{f(\mathbf{Y}|\theta^*_k, \theta^{(i)}_{-k})f(\theta^*_k, \theta_{-k}^{(i)})}{f(\mathbf{Y}|\theta^{(i)}_k, \theta^{(i)}_{-k})f(\theta^{(i)}_k, \theta_{-k}^{(i)})} \times \frac{f(\theta^{(i)}_k|\mathbf{Y}, \theta_{-k}^{(i)})}{f(\theta^{*}_k|\mathbf{Y}, \theta_{-k}^{(i)})}$$
+--
+
+- Rewrite the numerator/denominator in terms of the posterior and the data (and recall that $f(\mathbf{Y})$ cancels)
+
+$$\alpha = \frac{f(\theta^*_k, \theta^{(i)}_{-k}|\mathbf{Y})}{f(\theta^{(i)}_k, \theta^{(i)}_{-k}|\mathbf{Y})} \times \frac{f(\theta^{(i)}_k|\mathbf{Y}, \theta_{-k}^{(i)})}{f(\theta^{*}_k|\mathbf{Y}, \theta_{-k}^{(i)})}$$
+
+---
+
+# Gibbs Sampling
+
+- Factor the posteriors
+
+$$\alpha = \frac{f(\theta^*_k| \theta^{(i)}_{-k},\mathbf{Y}) \times f(\theta^{(i)}_{-k}|\mathbf{Y})}{f(\theta^{(i)}_k | \theta^{(i)}_{-k}, \mathbf{Y}) \times f(\theta^{(i)}_{-k}|\mathbf{Y})} \times \frac{f(\theta^{(i)}_k|\mathbf{Y}, \theta_{-k}^{(i)})}{f(\theta^{*}_k|\mathbf{Y}, \theta_{-k}^{(i)})}$$
+--
+
+- Everything cancels so that $\alpha = 1$
+  - So Gibbs sampling is a special case of Metropolis-Hastings where the proposal distribution choice **guarantees** acceptance.
+
+---
+
+class: title-slide
+
 # Bayesian Regression
+
+---
+
+# Model Setup
+
+---
+
+# Application - Predicting Elections
+
+```{r, message=F, warning=F}
+# Aggregate the house data to counties
+elections_county <- elections %>% group_by(fipscode) %>% summarize(state=state[1], county=county[1], 
+                                                                   total.votes = sum(total.votes),
+                                                                   dem = sum(dem))
+
+# Merge in 2015 Presidential
+pres_2016 <- read_csv("data/clinton_2016_vote.csv")
+elections_county <- elections_county %>% left_join(pres_2016 %>% select(county_fips, candidatevotes, totalvotes),
+                                                   by=c(fipscode="county_fips"))
+
+# Drop counties that we couldn't merge
+elections_county <- elections_county %>% filter(!is.na(candidatevotes)&!is.na(dem))
+
+# Generate vote shares
+elections_county$dem2018 <- elections_county$dem/elections_county$total.votes
+elections_county$dem2016 <- elections_county$candidatevotes/elections_county$totalvotes
+
+```
 
 ---
