@@ -3,9 +3,9 @@ title: 'PLSC 40502: Problem Set 1'
 author: "Solutions"
 date: "January 8, 2022"
 output:
+  pdf_document: default
   html_document:
     df_print: paged
-  pdf_document: default
 ---
   
 ```{r setup, include=FALSE}
@@ -258,17 +258,108 @@ Write down the probability density function for a single observation $p(y_i | \b
 
 ---
 
-$$p(y_i | \beta_0, \beta_1, \sigma^2)$$
+$$p(y_i | \beta_0, \beta_1, \sigma^2) = \frac{1}{\sigma\sqrt{2\pi}} \exp\bigg\{-\frac{1}{2}\bigg(\frac{Y_i - \beta_0 - \beta_1X_i}{\sigma} \bigg)^2 \bigg\}$$
 
 # Part B
 
 Write down the log-likelihood $\ell(\beta_0, \beta_1, \sigma^2| \mathbf{Y})$. Simplify as much as you can and drop any additive constants (this will help in the next part).
+
+---
+
+By independence 
+
+$$\ell(\beta_0, \beta_1, \sigma^2| \mathbf{Y}) = \sum_{i=1}^N \log p(y_i | \beta_0, \beta_1, \sigma^2)$$ 
+
+Properties of logs
+
+$$\ell(\beta_0, \beta_1, \sigma^2| \mathbf{Y}) = \sum_{i=1}^N \log\bigg(\frac{1}{\sigma\sqrt{2\pi}}\bigg) - \frac{1}{2}\bigg(\frac{Y_i - \beta_0 - \beta_1X_i}{\sigma} \bigg)^2$$ 
+
+More properties of logs and dropping additive constants
+
+$$\ell(\beta_0, \beta_1, \sigma^2| \mathbf{Y}) = - N \log(\sigma) - \frac{1}{2} \sum_{i=1}^N \bigg(\frac{Y_i - \beta_0 - \beta_1X_i}{\sigma} \bigg)^2$$ 
+Let's use $(a/b)^2 = a^2/b^2$ and pull the denominator out of the sum since it doesn't depend on $i$
+
+$$\ell(\beta_0, \beta_1, \sigma^2| \mathbf{Y}) = -n\log(\sigma) - \frac{1}{2\sigma^2} \sum_{i=1}^N (Y_i - \beta_0 - \beta_1X_i)^2$$
+
+Expand the expression further
+
+$$\ell(\beta_0, \beta_1, \sigma^2| \mathbf{Y}) = -n\log(\sigma) - \frac{1}{2\sigma^2} \sum_{i=1}^N (Y_i^2 + \beta_0^2 + \beta_1^2X_i^2 - 2Y_i\beta_0 - 2Y_iX_i\beta_1 + 2\beta_0\beta_1X_i)$$
+
 
 # Part C
 
 Find the MLE for $\beta_0$ and $\beta_1$
 
 Hint: Express one MLE in terms of the MLE of the other and substitute.
+
+---
+
+First take the partial derivative with respect to $\beta_0$
+
+$$\frac{\partial}{\partial \beta_0} \ell(\beta_0, \beta_1, \sigma^2| \mathbf{Y}) = \frac{1}{2\sigma^2} \sum_{i=1}^N (2\beta_0  - 2Y_i + 2\beta_1X_i)$$
+
+Set equal to $0$ and solve for $\hat{\beta_0}$
+
+$$0 = \frac{1}{2\sigma^2} \sum_{i=1}^N (2\hat{\beta_0}  - 2Y_i + 2\hat{\beta_1}X_i)$$
+Multiply by $\sigma^2$
+
+$$0 = \sum_{i=1}^N (\hat{\beta_0}  - Y_i + \hat{\beta_1}X_i)$$
+
+Split the sums
+
+$$0 = N \hat{\beta_0}  - \sum_{i=1}^N Y_i + \hat{\beta_1} \sum_{i=1}^NX_i$$
+Rearrange
+
+$$N \hat{\beta_0} =  \sum_{i=1}^N Y_i - \hat{\beta_1} \sum_{i=1}^NX_i$$
+Divide by $N$ and let $\bar{Y} = \frac{\sum_{i=1}^N Y_i}{N}$ and $\bar{X} = \frac{\sum_{i=1}^NX_i}{N}$ denote the means
+
+$$\hat{\beta_0} =  \bar{Y} - \hat{\beta_1} \bar{X}$$
+
+Next take the partial derivative with respect to $\beta_1$
+
+$$\frac{\partial}{\partial \beta_1} \ell(\beta_0, \beta_1, \sigma^2| \mathbf{Y}) = \frac{1}{2\sigma^2} \sum_{i=1}^N (2\beta_1X_i^2 - 2Y_iX_i  + 2\beta_0X_i)$$
+
+Set equal to $0$
+
+$$0 = \frac{1}{2\sigma^2} \sum_{i=1}^N (2\hat{\beta_1}X_i^2 - 2Y_iX_i  + 2\hat{\beta_0}X_i)$$
+Same steps as before
+
+$$0 = \hat{\beta_1}\sum_{i=1}^N X_i^2 - \sum_{i=1}^N Y_iX_i +  \hat{\beta_0} \sum_{i=1}^N X_i$$
+
+Substituting our expression for $\hat{\beta_0}$
+
+$$0 = \hat{\beta_1}\sum_{i=1}^N X_i^2 - \sum_{i=1}^N Y_iX_i +  (\bar{Y} - \hat{\beta_1} \bar{X})\sum_{i=1}^N X_i$$
+Rearranging and combining some sums
+
+$$0 = \hat{\beta_1}\sum_{i=1}^N \bigg(X_i^2 - \bar{X}X_i\bigg) - \sum_{i=1}^N \bigg( Y_iX_i - \bar{Y} X_i \bigg)$$
+
+Rearranging 
+
+$$\hat{\beta_1}\sum_{i=1}^N \bigg(X_i^2 - \bar{X}X_i\bigg)  = \sum_{i=1}^N \bigg( Y_iX_i - \bar{Y} X_i \bigg)$$
+
+Dividing
+
+$$\hat{\beta_1}  = \frac{\sum_{i=1}^N \bigg( Y_iX_i - \bar{Y} X_i \bigg)}{\sum_{i=1}^N \bigg(X_i^2 - \bar{X}X_i\bigg)}$$
+And factoring 
+
+$$\hat{\beta_1}  = \frac{\sum_{i=1}^N \bigg(X_i(Y_i - \bar{Y})\bigg)}{\sum_{i=1}^N \bigg(X_i(X_i - \bar{X})\bigg)}$$
+
+You can stop here, but to show it in the most familiar form, we need subtract $\sum_{i=1}^N\bar{X}(Y_i - \bar{Y})$ from the numerator and $\sum_{i=1}^N\bar{X}(X_i - \bar{X})$ from the denominator
+
+We can show that both of those terms equal zero since 
+
+$$\sum_{i=1}^N\bar{X}(Y_i - \bar{Y}) = \bar{X}\sum_{i=1}^N(Y_i - \bar{Y}) = \bar{X}(N\bar{Y} - N\bar{Y}) = 0$$
+
+$$\sum_{i=1}^N\bar{X}(X_i - \bar{X}) = \bar{X}\sum_{i=1}^N(X_i - \bar{X}) = \bar{X}(N\bar{X} - N\bar{X}) = 0$$
+
+Then,
+
+$$\hat{\beta_1}  = \frac{\sum_{i=1}^N \bigg(X_i(Y_i - \bar{Y})- \bar{X}(Y_i - \bar{Y}))\bigg)}{\sum_{i=1}^N \bigg(X_i(X_i - \bar{X}) - \bar{X}(X_i- \bar{X})\bigg)}$$
+
+And finally,
+
+$$\hat{\beta_1}  = \frac{\sum_{i=1}^N (X_i - \bar{X})(Y_i - \bar{Y})}{\sum_{i=1}^N (X_i - \bar{X})^2}$$
+
 
 # Part D
 
@@ -281,6 +372,16 @@ The MLE is the OLS estimator, which we know by the Gauss-Markov theorem is also 
 # Part E (Optional Bonus!):
 
 Find the MLE for $\sigma^2$. Is this MLE unbiased?
+
+---
+
+Define $\hat{Y_i}$ as $\beta_0 + \beta_1X_i$
+
+You should find that $\hat{\sigma^2}$ ends up being 
+
+$$\hat{\sigma^2} = \frac{1}{N} \sum_{i=1}^N (Y_i - \hat{Y_i})^2$$
+
+which we know from the properties of the OLS estimator is biased but consistent due to the presence of $N$ rather than $N-K$ in the denominator ("Bessel's correction"). Replacing that denominator with the "degrees-of-freedom" corrected sample size would yield an unbiased estimator of the population variance parameter.
 
 # Problem 3
 

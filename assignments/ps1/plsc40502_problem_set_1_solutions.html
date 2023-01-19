@@ -9,7 +9,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
-<meta name="author" content="YOUR NAME" />
+<meta name="author" content="Solutions" />
 
 <meta name="date" content="2022-01-08" />
 
@@ -1628,7 +1628,7 @@ display: none;
 
 
 <h1 class="title toc-ignore">PLSC 40502: Problem Set 1</h1>
-<h4 class="author">YOUR NAME</h4>
+<h4 class="author">Solutions</h4>
 <h4 class="date">January 8, 2022</h4>
 
 </div>
@@ -1900,14 +1900,39 @@ assumed to come from a normal distribution with mean <span class="math inline">\
 <span class="math inline">\(p(y_i | \beta_0, \beta_1,
 \sigma^2)\)</span></p>
 <hr />
-<p><span class="math display">\[p(y_i | \beta_0, \beta_1,
-\sigma^2)\]</span></p>
+<p><span class="math display">\[p(y_i | \beta_0, \beta_1, \sigma^2) =
+\frac{1}{\sigma\sqrt{2\pi}} \exp\bigg\{-\frac{1}{2}\bigg(\frac{Y_i -
+\beta_0 - \beta_1X_i}{\sigma} \bigg)^2 \bigg\}\]</span></p>
 </div>
 <div id="part-b-1" class="section level1">
 <h1>Part B</h1>
 <p>Write down the log-likelihood <span class="math inline">\(\ell(\beta_0, \beta_1, \sigma^2|
 \mathbf{Y})\)</span>. Simplify as much as you can and drop any additive
 constants (this will help in the next part).</p>
+<hr />
+<p>By independence</p>
+<p><span class="math display">\[\ell(\beta_0, \beta_1, \sigma^2|
+\mathbf{Y}) = \sum_{i=1}^N \log p(y_i | \beta_0, \beta_1,
+\sigma^2)\]</span></p>
+<p>Properties of logs</p>
+<p><span class="math display">\[\ell(\beta_0, \beta_1, \sigma^2|
+\mathbf{Y}) = \sum_{i=1}^N \log\bigg(\frac{1}{\sigma\sqrt{2\pi}}\bigg) -
+\frac{1}{2}\bigg(\frac{Y_i - \beta_0 - \beta_1X_i}{\sigma}
+\bigg)^2\]</span></p>
+<p>More properties of logs and dropping additive constants</p>
+<p><span class="math display">\[\ell(\beta_0, \beta_1, \sigma^2|
+\mathbf{Y}) = - N \log(\sigma) - \frac{1}{2} \sum_{i=1}^N
+\bigg(\frac{Y_i - \beta_0 - \beta_1X_i}{\sigma} \bigg)^2\]</span> Let’s
+use <span class="math inline">\((a/b)^2 = a^2/b^2\)</span> and pull the
+denominator out of the sum since it doesn’t depend on <span class="math inline">\(i\)</span></p>
+<p><span class="math display">\[\ell(\beta_0, \beta_1, \sigma^2|
+\mathbf{Y}) = -n\log(\sigma) - \frac{1}{2\sigma^2} \sum_{i=1}^N (Y_i -
+\beta_0 - \beta_1X_i)^2\]</span></p>
+<p>Expand the expression further</p>
+<p><span class="math display">\[\ell(\beta_0, \beta_1, \sigma^2|
+\mathbf{Y}) = -n\log(\sigma) - \frac{1}{2\sigma^2} \sum_{i=1}^N (Y_i^2 +
+\beta_0^2 + \beta_1^2X_i^2 - 2Y_i\beta_0 - 2Y_iX_i\beta_1 +
+2\beta_0\beta_1X_i)\]</span></p>
 </div>
 <div id="part-c-1" class="section level1">
 <h1>Part C</h1>
@@ -1915,6 +1940,72 @@ constants (this will help in the next part).</p>
 <span class="math inline">\(\beta_1\)</span></p>
 <p>Hint: Express one MLE in terms of the MLE of the other and
 substitute.</p>
+<hr />
+<p>First take the partial derivative with respect to <span class="math inline">\(\beta_0\)</span></p>
+<p><span class="math display">\[\frac{\partial}{\partial \beta_0}
+\ell(\beta_0, \beta_1, \sigma^2| \mathbf{Y}) = \frac{1}{2\sigma^2}
+\sum_{i=1}^N (2\beta_0  - 2Y_i + 2\beta_1X_i)\]</span></p>
+<p>Set equal to <span class="math inline">\(0\)</span> and solve for
+<span class="math inline">\(\hat{\beta_0}\)</span></p>
+<p><span class="math display">\[0 = \frac{1}{2\sigma^2} \sum_{i=1}^N
+(2\hat{\beta_0}  - 2Y_i + 2\hat{\beta_1}X_i)\]</span> Multiply by <span class="math inline">\(\sigma^2\)</span></p>
+<p><span class="math display">\[0 = \sum_{i=1}^N (\hat{\beta_0}  - Y_i +
+\hat{\beta_1}X_i)\]</span></p>
+<p>Split the sums</p>
+<p><span class="math display">\[0 = N \hat{\beta_0}  - \sum_{i=1}^N Y_i
++ \hat{\beta_1} \sum_{i=1}^NX_i\]</span> Rearrange</p>
+<p><span class="math display">\[N \hat{\beta_0} =  \sum_{i=1}^N Y_i -
+\hat{\beta_1} \sum_{i=1}^NX_i\]</span> Divide by <span class="math inline">\(N\)</span> and let <span class="math inline">\(\bar{Y} = \frac{\sum_{i=1}^N Y_i}{N}\)</span> and
+<span class="math inline">\(\bar{X} = \frac{\sum_{i=1}^NX_i}{N}\)</span>
+denote the means</p>
+<p><span class="math display">\[\hat{\beta_0} =  \bar{Y} - \hat{\beta_1}
+\bar{X}\]</span></p>
+<p>Next take the partial derivative with respect to <span class="math inline">\(\beta_1\)</span></p>
+<p><span class="math display">\[\frac{\partial}{\partial \beta_1}
+\ell(\beta_0, \beta_1, \sigma^2| \mathbf{Y}) = \frac{1}{2\sigma^2}
+\sum_{i=1}^N (2\beta_1X_i^2 - 2Y_iX_i  + 2\beta_0X_i)\]</span></p>
+<p>Set equal to <span class="math inline">\(0\)</span></p>
+<p><span class="math display">\[0 = \frac{1}{2\sigma^2} \sum_{i=1}^N
+(2\hat{\beta_1}X_i^2 - 2Y_iX_i  + 2\hat{\beta_0}X_i)\]</span> Same steps
+as before</p>
+<p><span class="math display">\[0 = \hat{\beta_1}\sum_{i=1}^N X_i^2 -
+\sum_{i=1}^N Y_iX_i +  \hat{\beta_0} \sum_{i=1}^N X_i\]</span></p>
+<p>Substituting our expression for <span class="math inline">\(\hat{\beta_0}\)</span></p>
+<p><span class="math display">\[0 = \hat{\beta_1}\sum_{i=1}^N X_i^2 -
+\sum_{i=1}^N Y_iX_i +  (\bar{Y} - \hat{\beta_1} \bar{X})\sum_{i=1}^N
+X_i\]</span> Rearranging and combining some sums</p>
+<p><span class="math display">\[0 = \hat{\beta_1}\sum_{i=1}^N
+\bigg(X_i^2 - \bar{X}X_i\bigg) - \sum_{i=1}^N \bigg( Y_iX_i - \bar{Y}
+X_i \bigg)\]</span></p>
+<p>Rearranging</p>
+<p><span class="math display">\[\hat{\beta_1}\sum_{i=1}^N \bigg(X_i^2 -
+\bar{X}X_i\bigg)  = \sum_{i=1}^N \bigg( Y_iX_i - \bar{Y} X_i
+\bigg)\]</span></p>
+<p>Dividing</p>
+<p><span class="math display">\[\hat{\beta_1}  = \frac{\sum_{i=1}^N
+\bigg( Y_iX_i - \bar{Y} X_i \bigg)}{\sum_{i=1}^N \bigg(X_i^2 -
+\bar{X}X_i\bigg)}\]</span> And factoring</p>
+<p><span class="math display">\[\hat{\beta_1}  = \frac{\sum_{i=1}^N
+\bigg(X_i(Y_i - \bar{Y})\bigg)}{\sum_{i=1}^N \bigg(X_i(X_i -
+\bar{X})\bigg)}\]</span></p>
+<p>You can stop here, but to show it in the most familiar form, we need
+subtract <span class="math inline">\(\sum_{i=1}^N\bar{X}(Y_i -
+\bar{Y})\)</span> from the numerator and <span class="math inline">\(\sum_{i=1}^N\bar{X}(X_i - \bar{X})\)</span> from
+the denominator</p>
+<p>We can show that both of those terms equal zero since</p>
+<p><span class="math display">\[\sum_{i=1}^N\bar{X}(Y_i - \bar{Y}) =
+\bar{X}\sum_{i=1}^N(Y_i - \bar{Y}) = \bar{X}(N\bar{Y} - N\bar{Y}) =
+0\]</span></p>
+<p><span class="math display">\[\sum_{i=1}^N\bar{X}(X_i - \bar{X}) =
+\bar{X}\sum_{i=1}^N(X_i - \bar{X}) = \bar{X}(N\bar{X} - N\bar{X}) =
+0\]</span></p>
+<p>Then,</p>
+<p><span class="math display">\[\hat{\beta_1}  = \frac{\sum_{i=1}^N
+\bigg(X_i(Y_i - \bar{Y})- \bar{X}(Y_i - \bar{Y}))\bigg)}{\sum_{i=1}^N
+\bigg(X_i(X_i - \bar{X}) - \bar{X}(X_i- \bar{X})\bigg)}\]</span></p>
+<p>And finally,</p>
+<p><span class="math display">\[\hat{\beta_1}  = \frac{\sum_{i=1}^N (X_i
+- \bar{X})(Y_i - \bar{Y})}{\sum_{i=1}^N (X_i - \bar{X})^2}\]</span></p>
 </div>
 <div id="part-d-1" class="section level1">
 <h1>Part D</h1>
@@ -1928,6 +2019,17 @@ theorem is also unbiased for the true regression parameters <span class="math in
 <h1>Part E (Optional Bonus!):</h1>
 <p>Find the MLE for <span class="math inline">\(\sigma^2\)</span>. Is
 this MLE unbiased?</p>
+<hr />
+<p>Define <span class="math inline">\(\hat{Y_i}\)</span> as <span class="math inline">\(\beta_0 + \beta_1X_i\)</span></p>
+<p>You should find that <span class="math inline">\(\hat{\sigma^2}\)</span> ends up being</p>
+<p><span class="math display">\[\hat{\sigma^2} = \frac{1}{N}
+\sum_{i=1}^N (Y_i - \hat{Y_i})^2\]</span></p>
+<p>which we know from the properties of the OLS estimator is biased but
+consistent due to the presence of <span class="math inline">\(N\)</span>
+rather than <span class="math inline">\(N-K\)</span> in the denominator
+(“Bessel’s correction”). Replacing that denominator with the
+“degrees-of-freedom” corrected sample size would yield an unbiased
+estimator of the population variance parameter.</p>
 </div>
 <div id="problem-3" class="section level1">
 <h1>Problem 3</h1>
