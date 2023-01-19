@@ -10,3 +10,6 @@ forcats
 haven
 estimatr
 knitr
+coda
+MASS
+MCMCpack

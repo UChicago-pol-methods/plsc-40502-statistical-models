@@ -836,11 +836,68 @@ class: title-slide
 
 ---
 
-# Model Setup
+# Application: Predicting Elections
+
+- Now suppose that instead of observing counts, we look at the democratic party vote share in county $i$ in the 2018 House elections (imagine we summed over all of the votes in all of the districts in that county).
+  - Let $Y_i$ denote the share of votes going to the democratic party candidate in 2018 in county $i$.
+--
+
+- We want to generate a predictive model based on $X_i$, (here, we'll just be using the democratic presidential vote share in 2016, but we'll be adding more as we go).
 
 ---
 
-# Application - Predicting Elections
+# Bayesian Normal Model
+
+- The conventional "normal" Bayesian regression model assumes
+
+$$Y_i | X_i, \beta, \sigma^2 \sim \text{Normal}(X_i^{\prime}\beta, \sigma^2)$$
+$$\beta | \sigma^2 \sim \text{Normal}(\beta_0, \sigma^2B^{-1}_0)$$
+$$\sigma^2 \sim \text{Inverse-Gamma}(\frac{c_0}{2}, \frac{d_0}{2})$$
+--
+
+- In this case, $\beta_0$, $B_0$, $a_0$ and $b_0$ are all hyper-parameters
+--
+
+- This is referred to as the "Normal-Inverse-Gamma" model as the joint prior distribution on $\beta, \sigma^2$ is Normal-Inverse Gamma and it happens to also be the **conjugate prior** for the case with unknown $\beta$ and $\sigma^2$
+  - So the posterior is known in closed form to be **Normal-Inverse-Gamma**
+  - And conditional on $\sigma^2$, $\beta | \mathbf{X}, \mathbf{Y}, \sigma^2$ is also normally distributed!
+--
+
+- A common simplification is to make $\beta$ and $\sigma^2$ marginally independent
+
+$$\beta \sim \text{Normal}(\beta_0, B_0^{-1})$$
+
+---
+
+# Plate notation
+
+```{tikz, dag2, echo=F, fig.align='center'}
+\usetikzlibrary{arrows}
+\usetikzlibrary{bayesnet}
+\begin{tikzpicture}
+\node[obs] (y) {$Y_i$};
+\node[const, above=of y] (x) {$X_i$};
+\node[latent, right=of x] (beta) {$\beta$};
+\node[latent, right=of y] (sigma) {$\sigma^2$};
+\node[const, right=of beta,] (beta0) {$\beta_0$};
+\node[const, right=of beta, yshift=-.5cm] (B0) {$B_0$};
+\node[const, right=of sigma ] (alpha0) {$c_0$};
+\node[const, right=of sigma, yshift=-.5cm] (delta0) {$d_0$};
+\edge{x}{y};
+\edge{beta}{y};
+\edge{sigma}{y};
+\edge{sigma}{beta};
+\edge{beta0}{beta};
+\edge{B0}{beta};
+\edge{alpha0}{sigma};
+\edge{delta0}{sigma};
+\plate [inner sep=.3cm] {plate1} {(y) (x)} {$N$};
+\end{tikzpicture}
+```
+
+---
+
+# Application: Predicting Elections
 
 ```{r, message=F, warning=F}
 # Aggregate the house data to counties
@@ -853,13 +910,212 @@ pres_2016 <- read_csv("data/clinton_2016_vote.csv")
 elections_county <- elections_county %>% left_join(pres_2016 %>% select(county_fips, candidatevotes, totalvotes),
                                                    by=c(fipscode="county_fips"))
 
-# Drop counties that we couldn't merge
-elections_county <- elections_county %>% filter(!is.na(candidatevotes)&!is.na(dem))
-
 # Generate vote shares
 elections_county$dem2018 <- elections_county$dem/elections_county$total.votes
 elections_county$dem2016 <- elections_county$candidatevotes/elections_county$totalvotes
 
+# Drop missing
+elections_county <- elections_county %>% filter(!is.na(dem2018)&!is.na(dem2016))
+```
+
+---
+
+# Metropolis-Hastings
+
+- Set up the regression
+
+```{r, message=F, warning=F}
+X_mat <- model.matrix(dem2018 ~ dem2016, data=elections_county)
+Y <- elections_county$dem2018
+K <- ncol(X_mat) # Number of beta parameters
+```
+
+- Set up a diffuse prior
+
+```{r}
+beta_0 <- rep(0, K)
+B_inv_0 <- solve(diag(rep(1/9, K)))
+c_0 = 0.001
+d_0 = 0.001
+```
+
+- Set up the MCMC
+
+```{r, cache=T}
+M <- 40000  # Number of MCMC samples
+burnin <- 5000
+beta_mcmc <- matrix(nrow = M, ncol=K) # Vector to store our samples
+beta_mcmc[1,] <- c(0,1) # Pick a starting value
+sigma_mcmc <- rep(NA, M)
+sigma_mcmc[1] <- 1
+```
+
+---
+
+# Metropolis-Hastings
+
+- Write some functions to evaluate the likelihood and priors
+
+```{r}
+log_lik_norm <- function(b, sigma, Y, X){
+  linpred <- X%*%b
+  sum(dnorm(Y, mean=linpred, sd=sigma, log=T))
+}
+```
+
+---
+
+# Metropolis-Hastings
+
+```{r, cache=T}
+set.seed(60637)
+for (i in 1:(M-1)){ # For i in 1:(M-1)
+  ## Beta 
+    ## Step 1 - Proposal
+    beta_star <- as.vector(mvtnorm::rmvnorm(1, mean  = beta_mcmc[i,], sigma=.00001*diag(K)))
+    ## Step 2 - Accept/Reject
+    lik_star_beta <- log_lik_norm(beta_star, sigma_mcmc[i], Y, X_mat)
+    lik_current_beta <- log_lik_norm(beta_mcmc[i,], sigma_mcmc[i], Y, X_mat)
+    
+    prior_star_beta <- mvtnorm::dmvnorm(beta_star, mean = beta_0, sigma = B_inv_0, log=T)
+    prior_current_beta <- mvtnorm::dmvnorm(beta_mcmc[i,], mean = beta_0, sigma = B_inv_0, log=T)
+    
+    ## Accept/reject
+    ar_beta <- exp( lik_star_beta + prior_star_beta - lik_current_beta - prior_current_beta)
+    accept_beta <- rbinom(1,1,min(1,ar_beta))
+    beta_mcmc[i+1,] <- beta_star*accept_beta + beta_mcmc[i,]*(1-accept_beta)
+
+  ## Sigma
+    ## Step 1 - Proposal
+    sigma_log <- rnorm(1, mean = log(sigma_mcmc[i]), sd=.01)
+    sigma_star <- exp(sigma_log)
+  
+    ## Step 2 - Accept/Reject
+    lik_star_sigma <- log_lik_norm(beta_mcmc[i+1,], sigma_star, Y, X_mat)
+    lik_current_sigma <- log_lik_norm(beta_mcmc[i+1,], sigma_mcmc[i], Y, X_mat)
+    # The trick here is independence - otherwise if \sigma^2 appeared in the prior for \beta, we'd need another term
+    prior_star_sigma <- log(MCMCpack::dinvgamma(sigma_star^2, shape = c_0/2, scale = d_0/2))
+    prior_current_sigma  <-  log(MCMCpack::dinvgamma(sigma_mcmc[i]^2, shape = c_0/2, scale = d_0/2))
+    
+    ## Accept/reject
+    ar_sigma <- exp(lik_star_sigma + prior_star_sigma - lik_current_sigma - prior_current_sigma)
+    accept_sigma <- rbinom(1,1,min(1,ar_sigma))
+    sigma_mcmc[i+1] <- sigma_star*accept_sigma + sigma_mcmc[i]*(1-accept_sigma)
+    
+}
+```
+
+---
+
+# Convergence
+
+- $\beta_0$
+
+```{r, fig.align="center", fig.height=4, fig.width=7}
+beta_mcmc_use <- beta_mcmc[burnin:M,] # Toss our burn-in period
+plot(y=beta_mcmc_use[,1], x=1:length(beta_mcmc_use[,1]), xlab="Iteration", ylab="beta_0", type="l")
+```
+
+---
+
+
+# Convergence
+
+- $\beta_1$
+
+```{r, fig.align="center", fig.height=4, fig.width=7}
+plot(y=beta_mcmc_use[,2], x=1:length(beta_mcmc_use[,2]), xlab="Iteration", ylab="beta_1", type="l")
+```
+
+---
+
+
+# Convergence
+
+
+- $\sigma$
+
+```{r, fig.align="center", fig.height=4, fig.width=7}
+sigma_mcmc_use <- sigma_mcmc[burnin:M]
+plot(y=sigma_mcmc_use, x=1:length(sigma_mcmc_use), xlab="Iteration", ylab="beta_1", type="l")
+```
+
+---
+
+# Summaries
+
+$\beta_0$
+
+```{r, fig.align="center", fig.height=4, fig.width=7, warning=F}
+beta_mcmc_out <- as.data.frame(beta_mcmc_use)
+colnames(beta_mcmc_out) <- c("Intercept", "dem2016")
+beta_mcmc_out %>% ggplot(aes(x=Intercept)) + xlim(.01, .05) +  theme_bw() + xlab("Intercept") + geom_histogram(aes(y=after_stat(density)), bins=50)
+```
+
+---
+
+# Summaries
+
+$\beta_1$
+
+```{r, fig.align="center", fig.height=4, fig.width=7, warning=F}
+beta_mcmc_out %>% ggplot(aes(x=dem2016)) +  theme_bw() + xlim(1.02, 1.10) + xlab("2016 Democratic Presidential Vote") + geom_histogram(aes(y=after_stat(density)), bins=50)
+```
+
+---
+
+# Summaries
+
+- Overlay the data and regression
+
+```{r, fig.align="center", fig.height=7, fig.width=9, warning=F,echo=F}
+elections_county %>% ggplot(aes(y=dem2018, x=dem2016)) + geom_point(cex=.4, alpha=.1, col="blue") + geom_abline(aes(intercept=Intercept, slope=dem2016), col="grey", alpha=.5, data=beta_mcmc_out[seq(1, nrow(beta_mcmc_out), by=400),], lwd=1) + geom_abline(aes(intercept=mean(beta_mcmc_out[seq(1, nrow(beta_mcmc_out), by=400),][,1]), slope=mean(beta_mcmc_out[seq(1, nrow(beta_mcmc_out), by=400),][,2])), col="black", alpha=.5, lwd=1) + theme_bw() + xlim(0, 1) + ylim(0,1) + xlab("2016 Democratic Presidential Vote") +ylab("2018 Democratic House Vote")
+```
+
+---
+
+# Summaries
+
+- Posterior means and 95% credible intervals
+
+```{r}
+summary_results <- data.frame(variable = c("Intercept", "dem2016"), pm = colMeans(beta_mcmc_out), 
+                              ci95_lower = apply(beta_mcmc_out, 2, function(x) quantile(x, .025)),
+                              ci95_upper = apply(beta_mcmc_out, 2, function(x) quantile(x, .975)))
+
+summary_results
+```
+
+---
+
+# Gibbs sampler
+
+- Let's check against an existing Gibbs sampling implementation from `MCMCpack`
+
+```{r, cache=T, message=F}
+set.seed(60637)
+library(MCMCpack)
+gibbs_results <- MCMCpack::MCMCregress(dem2018 ~ dem2016, burnin=burnin, mcmc=M-burnin, 
+                                       beta.start = c(0, 1), b0=beta_0, B_0 = diag(rep(1/9, K)),
+                                       c0 = c_0, d0=d_0, data=elections_county)
+```
+
+---
+
+# Gibbs sampler
+
+```{r}
+summary(gibbs_results)
+```
+
+---
+
+# Diagnostics
+
+- The trace plots for the beta coefficients using Gibbs sampling have a lot less visible dependence!
+
+```{r}
+coda::traceplot(gibbs_results)
 ```
 
 ---
