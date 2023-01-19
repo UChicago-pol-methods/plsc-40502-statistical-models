@@ -695,9 +695,9 @@ for (i in 1:(M-1)){ # For i in 1:(M-1)
   theta_star <- rlogis(1, location = theta_i)
   ## Step 2 - Accept/Reject
   lik_star <- dbinom(mn6_hennepin$dem, mn6_hennepin$total.votes, prob = logistic(theta_star)) 
-  prior_star <- dbeta(logistic(theta_star), shape1 = 1, shape2=2)
+  prior_star <- dbeta(logistic(theta_star), shape1 = 1, shape2=1)
   lik_current <-  dbinom(mn6_hennepin$dem, mn6_hennepin$total.votes, prob = logistic(theta_i)) 
-  prior_current <- dbeta(logistic(theta_i), shape1 = 1, shape2=2)
+  prior_current <- dbeta(logistic(theta_i), shape1 = 1, shape2=1)
   Q_star_current <- dlogis(theta_star, location=theta_i) # This is all optional b/c of symmetry
   Q_current_star <- dlogis(theta_i, location=theta_star)
   #Assemble the acceptance ratio
@@ -855,7 +855,7 @@ $$\beta | \sigma^2 \sim \text{Normal}(\beta_0, \sigma^2B^{-1}_0)$$
 $$\sigma^2 \sim \text{Inverse-Gamma}(\frac{c_0}{2}, \frac{d_0}{2})$$
 --
 
-- In this case, $\beta_0$, $B_0$, $a_0$ and $b_0$ are all hyper-parameters
+- In this case, $\beta_0$, $B_0$, $c_0$ and $d_0$ are all hyper-parameters
 --
 
 - This is referred to as the "Normal-Inverse-Gamma" model as the joint prior distribution on $\beta, \sigma^2$ is Normal-Inverse Gamma and it happens to also be the **conjugate prior** for the case with unknown $\beta$ and $\sigma^2$
@@ -907,7 +907,7 @@ elections_county <- elections %>% group_by(fipscode) %>% summarize(state=state[1
 
 # Merge in 2015 Presidential
 pres_2016 <- read_csv("data/clinton_2016_vote.csv")
-elections_county <- elections_county %>% left_join(pres_2016 %>% select(county_fips, candidatevotes, totalvotes),
+elections_county <- elections_county %>% left_join(pres_2016 %>% dplyr::select(county_fips, candidatevotes, totalvotes),
                                                    by=c(fipscode="county_fips"))
 
 # Generate vote shares
