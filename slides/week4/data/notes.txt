@@ -1,0 +1,19 @@
+Change log:
+	12-19-2018: All of Connecticut's results are now certified, with the exception of the 120th district of the State House.
+	12-20-2018: added county results from Kansas, which was provided via email by the Secretary of State's office
+				added West Virginia's results. technically they're unofficial, but the Secretary of State has indicated that there's only one county where they're still waiting on a legal challenge. everywhere else is final
+	8-22-2019: fixed a couple incorrect party affiliations in the Nebraska Senate and Governor races. Thanks to Laura Nesson for flagging the errors!
+
+
+
+Notes about Maine:
+	The results for ME-02 are based off of the initial count of the vote (in which the Republican Poliquin leads), not the final count after the rank-choice voting rules were applied (in which Democrat Golden leads)
+
+Notes in Mississippi:
+	The data here were hand-entered. I think I have a data entry error for Danny Bedwell's (L) vote count in the regular Senate race. I've checked the county data twice and can't seem to find my error, but if you find it please let me know. The sum of his county-level results are 29 votes off of the official statewide number.
+
+Notes about New York and Connecticut:
+	The long version of the file maintains the information about candidates running on multiple party lines. The wide file collapses the Democrat/Republicans' votes across all parties into a single number.
+	
+Notes about West Virginia:
+	The state house uses some multi-member districts. In the office variable, these are indicated with the text 'State House (Vote for #)' where # is the number of members from this district
