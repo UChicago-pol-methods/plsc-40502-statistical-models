@@ -336,8 +336,8 @@ class: title-slide
 
 - The method draws on a theoretical core from differential geometry, but it's not strictly necessary to get the intuition for it. 
   - [Betancourt (2014) "A Conceptual Introduction to Hamiltonian Monte Carlo"](https://arxiv.org/abs/1701.02434) is a good overview for applied researchers (familiarity with statistics but not physics)
-  
 --
+
 - MCMC (ideally) works by 3 general phases 
   1. From the starting values, reach the "typical set" of parameter values that occupy most of the posterior density mass
   2. The MCMC traverses the "typical set" of values once.
@@ -464,6 +464,112 @@ install.packages("rstan", repos = c("https://mc-stan.org/r-packages/", getOption
   
 ---
 
+# Writing a Stan program
+
+- Stan programs define a particular statistical model through a sequence of blocks that identify the data (modeled and unmodeled), parameters, and statistical model.
+  - These are then translated to C++ and compiled. Because Stan uses C++, variables need to be declared differently from a language like R.
+  - C++ is **statically typed** - which means that the *type* of variable needs to be fixed at initialization.
+--
+
+-  Primary variable types and their syntax
+  - `int`: Integer and `real`: continuous values
+  - `vector` and `matrix` for real-valued column vectors and matrices
+  - `array` allows you to generate an array structure for any arbitrary type (like an integer) (note pre-2.26 Stan used a different syntax for this)
+
+--
+- If variables are constrained, these constraints can be added via `<upper = .>` and `<lower = .>` statements during variable declaration.
+--
+
+- **Minor notes**
+  - Stan programs in R can be saved as separate files (with a `.stan` suffix) or in a length 1 character vector (directly typed into R).
+  - Lines end with semi-colons `;`
+  - `//` denotes a comment
+  
+---
+
+# Program blocks
+
+- `data`: Defines the modeled (e.g. $Y$) and unmodeled data (e.g. $X$) that are used in the model.
+  - Includes any important constants (like sample size $N$) or number of parameters $K$ that you don't hard-code.
+  - When compiling and estimating the model, you'll pass in R objects for each entry defined in `data` through a list
+--
+
+- Example data block (for a logistic regression):
+
+```{stan output.var='data', eval=F, tidy=F}
+data{
+  int N; // number of observations
+  int K; // number of covariates
+  matrix[N, K] X; //matrix of covariates
+  array[N] int<lower=0, upper=1> y; // binary outcome
+}
+```
+  
+
+---
+
+# Program blocks
+
+- `parameters`: Defines the parameters of interest whose posterior density we're trying to sample from
+--
+
+- Example parameters block (for a logistic regression):
+
+```{stan, output.var='par', eval=F, tidy=F}
+parameters{
+  vector[n] beta; // beta coefficients
+}
+```
+  
+
+---
+
+# Program blocks
+
+- `model`: Defines the statistical distributions of the observed data + the parameters
+  - Likelihood and prior distributions
+--
+
+- Example model block (for a logistic regression):
+
+```{stan, output.var='model', eval=F, tidy=F}
+model{
+  beta ~ normal(0, 10); // normal prior
+  y ~ bernoulli_logit(X * beta); //bernoulli outcome (logit link)
+}
+```
+
+---
+
+# Program blocks
+
+- We can use for loops as well (can be useful for more complicated DGPs)
+
+```{stan, output.var='modelfor', eval=F, tidy=F}
+model{
+  for (k in 1:K){
+    beta[k] ~ normal(0, 10)
+  }
+  for (n in 1:N){
+    y[n] ~ bernoulli_logit(X[n] * beta)
+  }
+}
+```
+  
+
+
+---
+
+# Program blocks
+
+- Other useful (but not required) blocks
+  - `functions`: Contains user-defined functions that can be used within the remainder of the model definition (or made available to R)
+  - `transformed data`, `transformed parameters`: Contains deterministic transformations of either the data or the parameters.
+  - `generated quantities`: Contains functions that generate or simulate quantities from the model after estimation (e.g. predictions, posterior means, model summary statistics)
+
+---
+
+
 # Application: Elections
 
 - Let's implement the "Normal Regression" model in Stan
@@ -478,7 +584,7 @@ data {
 }
 parameters {
   vector[K] beta; //regression coefficients
-  real<lower = 0> sigma;
+  real<lower = 0> sigma; // standard deviation
 }
 model {
   beta ~ normal(0, 9); // multivariate normal prior
@@ -497,7 +603,7 @@ generated quantities {
 
 - Load the relevant packages
 
-```{r, warning=F, message=F}
+```{r, warning=F, message=F, results=F}
 library(rstan)
 ```
 
@@ -513,7 +619,7 @@ data_source <- list(N = nrow(X_mat), K = ncol(X_mat), X=X_mat, y=Y)
 
 - Run Stan! 
 
-```{r, echo=T, message=F, warning=F, cache=T}
+```{r, echo=T, message=F, warning=F, cache=T, results=F}
 set.seed(60637)
 model_fit <- stan(
   model_code = model_structure,  # Stan code
@@ -558,4 +664,90 @@ stan_plot(model_fit, pars = c("beta[2]"))
 
 ---
 
-# Posterior predictive checks
+class: title-slide
+
+# Model diagnostics
+
+---
+
+# Posterior predictive distribution
+
+- A very useful quantity to obtain is the **predictive** distribution of $y$ given the model.
+
+$$f(\tilde{y} | \mathbf{Y}) =\int f(\tilde{y}, \theta | \mathbf{Y}) d\theta = \int f(\tilde{y} | \mathbf{Y}, \theta) f(\theta | \mathbf{Y}) d\theta$$
+
+- Suppose our prediction target is the in-sample distribution of the covariates
+  - We can get the posterior predictive distribution directly from our MCMC algorithm by *drawing** a value of $y$ for each value of $\theta$ that we sample.
+--
+
+- (e.g.) for the logit
+```{stan, output.var='genq', eval=F, tidy=F}
+generated quantities {
+  y_rep ~ bernoulli_logit_rng(X * beta); //generate coin flips for each sample
+}
+```
+
+--
+
+- It is common to use the posterior predictive distribution as a model diagnostic ("posterior predictive checking")
+  1. Check in-sample fit: Does the model actually reproduce the distribution of the data?
+  2. Check against simulated data: Does the model recover the simulated distributions?
+
+---
+
+# Posterior predictive check
+
+- Pull the `y_rep` from the model (in the form of a list)
+
+```{r}
+y_ppc <- rstan::extract(model_fit)$y_rep
+```
+
+--
+
+- Calculate the upper and lower credible intervals
+
+```{r}
+y_ppc_ci <- t(apply(y_ppc, 2, function(x) quantile(x, c(.025, .975))))
+```
+
+
+- What's the share that cover the truth?
+
+```{r}
+cover_95 <- y_ppc_ci[,1]<Y&Y<y_ppc_ci[,2]
+mean(cover_95)
+```
+
+
+---
+
+# Posterior predictive check
+
+- What's the root mean squared deviation from the truth?
+
+```{r}
+sqd_error <- apply((Y - t(y_ppc))^2, 2, mean)
+print(sqrt(mean(sqd_error)))
+```
+
+--
+
+- Make a dataframe for the predictive "ribbon" plot
+
+```{r}
+elections_county$lowerppd <- y_ppc_ci[,1]
+elections_county$upperppd <- y_ppc_ci[,2] 
+```
+
+---
+
+# Posterior predictive check
+
+- Plot the posterior predictive intervals against the data
+
+```{r, fig.align="center", fig.height=7, fig.width=9, warning=F,echo=F}
+elections_county %>% ggplot(aes(y=dem2018, x=dem2016)) + geom_ribbon(aes(x=dem2016, ymin=lowerppd, ymax=upperppd), alpha=.2, col="orange") + geom_point(cex=.4, alpha=.1, col="blue") + geom_abline(aes(intercept=Intercept, slope=dem2016), col="grey", alpha=.5, data=beta_mcmc_out[seq(1, nrow(beta_mcmc_out), by=400),], lwd=1) + geom_abline(aes(intercept=mean(beta_mcmc_out[seq(1, nrow(beta_mcmc_out), by=400),][,1]), slope=mean(beta_mcmc_out[seq(1, nrow(beta_mcmc_out), by=400),][,2])), col="black", alpha=.5, lwd=1) + theme_bw() + xlim(0, 1) + ylim(0,1) + xlab("2016 Democratic Presidential Vote") +ylab("2018 Democratic House Vote")
+```
+
+---
