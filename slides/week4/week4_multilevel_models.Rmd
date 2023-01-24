@@ -664,6 +664,17 @@ stan_plot(model_fit, pars = c("beta[2]"))
 
 ---
 
+# Summary
+
+- There's cooler-looking stuff in `bayesplot`
+
+```{r, message=F, fig.align="center", fig.width=7, fig.height=5}
+library(bayesplot)
+mcmc_areas(as.matrix(model_fit), pars = c("beta[2]"))
+```
+
+---
+
 class: title-slide
 
 # Model diagnostics
@@ -748,6 +759,16 @@ elections_county$upperppd <- y_ppc_ci[,2]
 
 ```{r, fig.align="center", fig.height=7, fig.width=9, warning=F,echo=F}
 elections_county %>% ggplot(aes(y=dem2018, x=dem2016)) + geom_ribbon(aes(x=dem2016, ymin=lowerppd, ymax=upperppd), alpha=.2, col="orange") + geom_point(cex=.4, alpha=.1, col="blue") + geom_abline(aes(intercept=Intercept, slope=dem2016), col="grey", alpha=.5, data=beta_mcmc_out[seq(1, nrow(beta_mcmc_out), by=400),], lwd=1) + geom_abline(aes(intercept=mean(beta_mcmc_out[seq(1, nrow(beta_mcmc_out), by=400),][,1]), slope=mean(beta_mcmc_out[seq(1, nrow(beta_mcmc_out), by=400),][,2])), col="black", alpha=.5, lwd=1) + theme_bw() + xlim(0, 1) + ylim(0,1) + xlab("2016 Democratic Presidential Vote") +ylab("2018 Democratic House Vote")
+```
+
+---
+
+# Posterior predictive check
+
+- Or plot the empirical density vs. the posterior predicted curves
+
+```{r, fig.align="center", fig.height=6, fig.width=8, warning=F}
+bayesplot::ppc_dens_overlay(y = elections_county$dem2018, yrep = y_ppc)
 ```
 
 ---
