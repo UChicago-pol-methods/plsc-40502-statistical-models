@@ -517,7 +517,7 @@ data{
 
 ```{stan, output.var='par', eval=F, tidy=F}
 parameters{
-  vector[n] beta; // beta coefficients
+  vector[K] beta; // beta coefficients
 }
 ```
   
@@ -593,6 +593,8 @@ model {
 }
 generated quantities {
   array[N] real y_rep = normal_rng(X * beta, sigma);
+  vector[N] log_lik;
+  for (n in 1:N) log_lik[n] = normal_lpdf(y[n] | X[n, ] * beta, sigma);
 }
 "
 ```
@@ -620,15 +622,15 @@ data_source <- list(N = nrow(X_mat), K = ncol(X_mat), X=X_mat, y=Y)
 - Run Stan! 
 
 ```{r, echo=T, message=F, warning=F, cache=T, results=F}
-set.seed(60637)
 model_fit <- stan(
   model_code = model_structure,  # Stan code
   data = data_source,    # named list of data
   chains = 4,             # number of Markov chains
   warmup = 500,          # number of warmup iterations per chain
   iter = 2500,            # total number of iterations per chain
-  cores = 1,              # number of cores (could use one per chain - by default uses however many you have)
-  refresh = 0           # no progress shown
+  cores = 4,              # number of cores (could use one per chain - by default uses however many you have)
+  refresh = 0,          # no progress shown
+  seed = 60637
   )
 ```
 
@@ -649,7 +651,7 @@ traceplot(model_fit, pars = c("beta"))
 - Summarize the fit
 
 ```{r}
-summary(model_fit, pars=c("beta", "sigma"))
+print(model_fit, pars = c("beta","sigma"))
 ```
 
 ---
@@ -668,9 +670,13 @@ stan_plot(model_fit, pars = c("beta[2]"))
 
 - There's cooler-looking stuff in `bayesplot`
 
-```{r, message=F, fig.align="center", fig.width=7, fig.height=5}
+```{r, message=F}
 library(bayesplot)
-mcmc_areas(as.matrix(model_fit), pars = c("beta[2]"))
+```
+
+```{r, message=F, fig.align="center", fig.width=7, fig.height=4, cache=T}
+coef_plot <- mcmc_areas(model_fit, pars = c("beta[2]"))
+coef_plot
 ```
 
 ---
@@ -757,8 +763,8 @@ elections_county$upperppd <- y_ppc_ci[,2]
 
 - Plot the posterior predictive intervals against the data
 
-```{r, fig.align="center", fig.height=7, fig.width=9, warning=F,echo=F}
-elections_county %>% ggplot(aes(y=dem2018, x=dem2016)) + geom_ribbon(aes(x=dem2016, ymin=lowerppd, ymax=upperppd), alpha=.2, col="orange") + geom_point(cex=.4, alpha=.1, col="blue") + geom_abline(aes(intercept=Intercept, slope=dem2016), col="grey", alpha=.5, data=beta_mcmc_out[seq(1, nrow(beta_mcmc_out), by=400),], lwd=1) + geom_abline(aes(intercept=mean(beta_mcmc_out[seq(1, nrow(beta_mcmc_out), by=400),][,1]), slope=mean(beta_mcmc_out[seq(1, nrow(beta_mcmc_out), by=400),][,2])), col="black", alpha=.5, lwd=1) + theme_bw() + xlim(0, 1) + ylim(0,1) + xlab("2016 Democratic Presidential Vote") +ylab("2018 Democratic House Vote")
+```{r, fig.align="center", fig.height=7, fig.width=9, warning=F,echo=F, cache=T}
+elections_county %>% ggplot(aes(y=dem2018, x=dem2016)) + geom_ribbon(aes(x=dem2016, ymin=lowerppd, ymax=upperppd), alpha=.2, col="orange") + geom_point(cex=.6, alpha=1, col="blue")  + geom_abline(aes(intercept=mean(rstan::extract(model_fit, "beta[1]")$`beta[1]`), slope=mean(rstan::extract(model_fit, "beta[2]")$`beta[2]`))) + theme_bw() + xlim(0, 1) + ylim(0,1) + xlab("2016 Democratic Presidential Vote") +ylab("2018 Democratic House Vote")
 ```
 
 ---
@@ -767,8 +773,576 @@ elections_county %>% ggplot(aes(y=dem2018, x=dem2016)) + geom_ribbon(aes(x=dem20
 
 - Or plot the empirical density vs. the posterior predicted curves
 
-```{r, fig.align="center", fig.height=6, fig.width=8, warning=F}
-bayesplot::ppc_dens_overlay(y = elections_county$dem2018, yrep = y_ppc)
+```{r, fig.align="center", fig.height=6, fig.width=8, warning=F, cache = T}
+bayesplot::ppc_dens_overlay(y = elections_county$dem2018, yrep = y_ppc[1:25,])
+```
+
+---
+
+# Model Diagnostics
+
+- There are two general approaches to evaluating model quality and comparing the predictive power of two or more statistical models given the same data
+  - **Information criteria**
+  - **Cross-validation**
+--
+
+- Both apporaches actually share common goals
+  - **Reward** quality of predictions
+  - **Penalize** model complexity
+--
+
+- We want to avoid models that **overfit** to the observed data 
+  - Information criteria address this with an explicit penalty term for the number of parameters
+  - Cross-validation methods do this by evaluating fit on a "held-out" part of the data that's not used to estimate the model.
+
+---
+
+# Information Criteria
+
+- Frequentist/MLE Inference - the **Akaike Information Criterion**
+  
+$$\text{AIC} = 2k - 2\ell(\hat{\theta})$$
+where $k$ is the number of parameters and $\ell(\hat{\theta})$ is the value of the maximized log-likelihood.
+
+  - Pick the model with the **lowest** AIC
+--
+
+- Bayesian Inference - the **Deviance Information Criterion**
+
+$$\text{DIC} = 2p_{DIC} - 2\log p(y | \hat{\theta}_{\text{PM}})$$
+
+where $\hat{\theta}_{\text{PM}}$ is the posterior mean and the "effective number of parameters" is
+
+$$p_{DIC} = (\log p(y | \hat{\theta}_{\text{PM}}) - E_{\text{post}}[\log p(y|\theta)])$$
+---
+
+# Log-predictive density
+
+- In general, a very common objective function for evaluating the quality of model "fit" in a Bayesian setting is the **log-predictive density** or $\log p(y | \theta)$
+  - Think of it as a more general version of criteria like "mean-squared error"
+--
+
+- For a new "out-of-sample" $\tilde{y}_i$, the posterior predictive distribution is
+
+$$\log p_{\text{post}} (\tilde{y}_i) = \log \int p(\tilde{y}_i | \theta) \times p_{\text{post}}(\theta)d\theta$$
+
+--
+
+- We want to pick a model that has a high **expected log pointwise-predictive density** -- for a "new" size $n$ sample of observation drawn from a common distribution $f(\tilde{y}_i)$,
+
+$$\text{elppd} = \sum_{i=1}^n E_f[\log p_{\text{post}} (\tilde{y}_i)] = \sum_{i=1}^n\int \log p_{\text{post}} (\tilde{y}_i)f(\tilde{y}_i)d\tilde{y}_i$$
+
+--
+
+- Our goal is to try to estimate this from the data that we have.
+
+---
+
+# Estimating elppd
+
+- One approach would be to use the "in-sample" fit criterion using in-sample observations $y_i$
+
+$$\text{lppd} = \sum_{i=1}^n \log p_{\text{post}} (y_i)$$
+--
+
+- But here we know that it's going to be biased for the "out-of-sample" predictive error due to over-fitting.
+--
+
+- An improvement would be to correct the "in-sample" fit using a measure of the model complexity
+  - This is the intuition behind AIC, DIC, (and other information criteria like WAIC)
+--
+
+- An alternative would be to use **cross-validation**:
+  - Split the sample into $K$ "folds" (typical choice is 10)
+  - For each fold $k$, estimate the model on the $K-1$ other folds 
+  - Using that model, calculate the log-predictive density for the observations in the $k$th fold
+  - The $k$th fold is the "held-out" (or "test" set), the $K-1$ remaining folds are the "training" set
+  
+--
+
+- When $K = N$, this is often known as **"leave-one out" cross-validation**
+
+---
+
+# Leave-one-out CV 
+
+- `loo` implements a leave-one-out cross-validation method that does not require re-fitting the model by using importance-sampling (Vehtari, Gelman and Gabry, 2017)
+  - And interestingly, it's asymptotically equivalent to the WAIC ("Watanabe-Akaike (or widely applicable) information criterion")
+--
+
+- In order to use `loo`, we need the log-likelihood evaluated at each observation. This comes by default in canned `rstanarm` models but for custom models we need to specify to return it in the `generated quantities` block
+- For the typical normal regression:
+
+```{stan, output.var="loo.ex", eval=F}
+vector[N] log_lik;
+for (n in 1:N) log_lik[n] = normal_lpdf(y[n] | X[n, ] * beta, sigma);
+```
+
+- But this will depend on the *actual* log-likelihood of the model
+
+---
+
+# Leave-one-out CV 
+
+- Once specified, we can obtain an estimate of the expected log predictive accuracy 
+
+```{r, warning=F, messsage=F, cache=T}
+library(loo)
+loo_reg <- loo(model_fit, pars="log_lik")
+loo_reg$estimates
+```
+
+---
+
+class: title-slide
+
+# Multilevel Models
+
+
+---
+
+# Hierarchical Models
+
+- In our simple normal regression from before, we assumed both a common mean and intercept for the data.
+  - The underlying model is the same regardless of state.
+--
+
+- We also assumed that observations were completely exchangeable
+  - $Y_i \sim \text{Normal}(X_i^{\prime}\beta, \sigma^2)$ implies no residual correlation in the outcomes across **all** counties.
+--
+
+- This may be a poor modeling choice if states are very heterogeneous and information about the state in which a county is in would provide additional predictive power beyond knowing the 2016 presidential vote.
+  - Additionally, **exchangeability** of observations may be violated -- unobserved factors may lead observations within a particular state to be correlated (e.g. if all counties in a region are exposed to some common shock). 
+
+---
+
+# Hierarchical Models
+
+- **Hierarchical** or **Multilevel** linear models try to address this by incorporating additional structure on the regression parameters.
+  - Suppose observations belong to a group $j \in \{1, 2, 3, \dotsc, J\}$ (e.g. states, time periods, schools, etc...)
+  - We observe $Y_{ij}$ as the outcome for unit $i$ in grouping $j$.
+--
+
+- We can incorporate group membership into the data-generating process.
+- Instead of a **common prior** on $\beta \sim \text{Normal}(b_0, B_0^{-1})$, we may do something like:
+  
+  $$\beta_j \sim \text{Normal}(\mu_{\beta}, \Sigma_{\beta})$$
+  $$Y_{ij} \sim \text{Normal}(X_{ij}^{\prime}\beta_{j}, \sigma^2)$$
+  
+--
+- This model assumes that each group has it's own set of group-level coefficients $\beta_j$ that are drawn from a common distribution centered at $\beta$.
+- The choice of prior on $\beta$ then dictates the degree of **pooling** across groupings.
+  - Flat prior: **no pooling** - $\beta_j$ are estimated entirely separately
+  - Zero variance prior: complete pooling (all $\beta_j$ are equal to $\beta$)
+
+---
+
+
+# Hierarchical Models
+
+- There are lots of choices about how we want to incorporate hierarchy into the model the coefficients across groupings
+  - What levels of aggregation and how many?
+  - Which parameters should be allowed to vary (all of the coefficients or just the intercepts)?
+  - Where does the structure enter into the model (the means? the variances? the covariances?)
+
+---
+
+# Fully pooled model
+
+- Our regression from before is an example of a fully pooled regression.
+  - Within individual states though, the regression line may be a poor predictor
+  
+```{r, fig.align="center", fig.height=6, fig.width=11, warning=F,echo=F, cache=T}
+elections_county %>% filter(state %in% c("IL", "TX", "CA")) %>% ggplot(aes(y=dem2018, x=dem2016)) + geom_ribbon(aes(x=dem2016, ymin=lowerppd, ymax=upperppd), alpha=.2, col="orange") + geom_point(cex=.6, alpha=1, col="blue")  + geom_abline(aes(intercept=mean(rstan::extract(model_fit, "beta[1]")$`beta[1]`), slope=mean(rstan::extract(model_fit, "beta[2]")$`beta[2]`)), col="black",  lwd=1.5) + theme_bw() + xlim(0, 1) + ylim(0,1) + xlab("2016 Democratic Presidential Vote") +ylab("2018 Democratic House Vote") + facet_wrap(~state, ncol=3)
+```
+
+---
+
+# Varying intercepts model
+
+- The simplest fix is to allow the "intercept" to shift across units.
+--
+
+- Assume:
+
+$$Y_{ij} \sim \text{Normal}(X_{ij}^{\prime}\beta + \alpha_{j}, \sigma^2)$$
+$$\alpha_j \sim \text{Normal}(0, \sigma^2_\alpha)$$
+
+And keep the same priors as before on the $\beta$ and $\sigma^2_j$ parameters. Here, we now omit the intercept from the betas.
+
+--
+
+- $\alpha_j$ can be interpreted as the group-specific "shift" in the intercept from the "grand" intercept $\beta_0$
+  - An equivalent parameterization would be to remove the intercept from $\beta$ and write $\alpha_j \sim Normal(\mu_\alpha, \Sigma_\alpha)$
+
+
+---
+
+# Varying intercepts model
+
+- Let's implement this in Stan - first, our `data` block
+
+```{stan output.var='data.int', eval=F, tidy=F}
+data{
+  int N; // number of observations
+  int J; // Number of groups
+  int K; // number of covariates
+  array[N] int J_i; // group membership indicator
+  matrix[N, K] X; //matrix of covariates
+  vector[N] y; //outcome
+}
+```
+
+---
+
+# Varying intercepts model
+
+- Next, our parameters.
+
+```{stan output.var='par.int', eval=F, tidy=F}
+parameters{
+  vector[K] beta; // beta coefficients
+  vector[J] alpha; // random intercepts
+  real<lower = 0> sigma; // variance of outcome
+  real<lower=0> sigma_a; // variance of intercepts
+}
+```
+
+---
+
+# Varying intercepts model
+
+- Finally, our model
+
+```{stan output.var='model.int', eval=F, tidy=F}
+model{
+  beta ~ normal(0, 9); // normal prior on coefficients
+  alpha ~ normal(0, sigma_a); // normal distribution on random intercepts
+  sigma ~ inv_gamma(0.001/2, 0.001/2); 
+  sigma_a ~ inv_gamma(0.001/2, 0.001/2);
+  y ~ normal(alpha[J_i] + X*beta, sigma);
+}
+```
+
+---
+
+# Varying intercepts model
+
+- Put it into Stan!
+
+```{r, echo=F}
+varying_intercepts_model <- "
+data{
+  int N; // number of observations
+  int J; // Number of groups
+  int K; // number of covariates
+  array[N] int J_i; // group membership indicator
+  matrix[N, K] X; //matrix of covariates
+  vector[N] y; //outcome
+}
+parameters{
+  vector[K] beta; // beta coefficients
+  vector[J] alpha; // random intercepts
+  real<lower = 0> sigma; // variance parameters
+  real<lower=0> sigma_a;
+}
+model{
+  beta ~ normal(0, 9); // normal prior on coefficients
+  alpha ~ normal(0, sigma_a); // normal distribution on random intercepts
+  sigma ~ inv_gamma(0.001/2, 0.001/2); 
+  sigma_a ~ inv_gamma(0.001/2, 0.001/2);
+  y ~ normal(alpha[J_i] + X*beta, sigma);
+}
+generated quantities {
+  array[N] real y_rep = normal_rng(alpha[J_i] + X*beta, sigma);
+  vector[N] log_lik;
+  for (n in 1:N) log_lik[n] = normal_lpdf(y[n] | alpha[J_i[n]] + X[n]*beta, sigma);
+}
+"
+```
+
+```{r}
+elections_county$state_num <- as.numeric(as.factor(elections_county$state))
+varying_intercepts_data <- list(N = nrow(X_mat), J = length(unique(elections_county$state_num)),
+                    J_i = elections_county$state_num,
+                    K = ncol(X_mat), X=X_mat, y=Y)
+```
+
+```{r, echo=T, message=F, warning=F, cache=T, results=F}
+model_var_intercept <- stan(
+  model_code = varying_intercepts_model,  # Stan code
+  data = varying_intercepts_data,    # named list of data
+  chains = 4,             # number of Markov chains
+  warmup = 500,          # number of warmup iterations per chain
+  iter = 2500,            # total number of iterations per chain
+  cores = 4,              # number of cores (this is much slower if = 1)
+  refresh = 0,          # no progress shown
+  seed = 60637          # random seed
+  )
+```
+
+---
+
+# Varying intercepts model
+
+- Summarize the fit
+
+```{r}
+print(model_var_intercept, pars = c("beta","sigma","alpha[1]"))
+```
+
+---
+
+# Posterior predictive check
+
+- Pull the `y_rep` from the model (in the form of a list)
+
+```{r}
+y_ppc_varint <- rstan::extract(model_var_intercept)$y_rep
+```
+
+--
+
+- Calculate the upper and lower credible intervals
+
+```{r}
+y_ppc_ci_varint <- t(apply(y_ppc_varint, 2, function(x) quantile(x, c(.025, .975))))
+```
+
+
+- What's the share that cover the truth?
+
+```{r}
+cover_95_varint <- y_ppc_ci_varint[,1]<Y&Y<y_ppc_ci_varint[,2]
+mean(cover_95_varint)
+```
+
+---
+
+# Posterior predictive check
+
+- Empirical density vs. predicted
+
+```{r, fig.align="center", fig.height=6, fig.width=8, warning=F, cache = T}
+bayesplot::ppc_dens_overlay(y = elections_county$dem2018, yrep = y_ppc_varint[1:25,])
+```
+
+---
+
+# Posterior predictive check
+
+- What's the root mean squared deviation from the truth?
+
+```{r}
+sqd_error_varint <- apply((Y - t(y_ppc_varint))^2, 2, mean)
+print(sqrt(mean(sqd_error_varint)))
+```
+
+--
+
+- Make a dataframe for the predictive "ribbon" plot
+
+```{r}
+elections_county$lowerppdVI <- y_ppc_ci_varint[,1]
+elections_county$upperppdVI <- y_ppc_ci_varint[,2] 
+```
+
+---
+
+# Outcome plots
+
+- Compare the two regression lines
+
+```{r, echo=F}
+elections_county$groupMeanInt <- mean(rstan::extract(model_var_intercept, "beta[1]")$`beta[1]`) + colMeans(rstan::extract(model_var_intercept)$alpha)[elections_county$state_num]
+elections_county$groupMeanSlope <- mean(rstan::extract(model_var_intercept, "beta[2]")$`beta[2]`)
+```
+
+```{r, fig.align="center", fig.height=6, fig.width=11, warning=F,echo=F, cache=T}
+elections_county %>% filter(state %in% c("IL", "TX", "CA")) %>% ggplot(aes(y=dem2018, x=dem2016)) + geom_ribbon(aes(x=dem2016, ymin=lowerppdVI, ymax=upperppdVI), alpha=.2, col="orange") + geom_point(cex=.6, alpha=1, col="blue")  + geom_abline(aes(intercept=groupMeanInt, slope=groupMeanSlope), col="red",  lwd=1.5)  + geom_abline(aes(intercept=mean(rstan::extract(model_fit, "beta[1]")$`beta[1]`), slope=mean(rstan::extract(model_fit, "beta[2]")$`beta[2]`)), col="black", alpha=.4, lwd=1.5) + theme_bw() + xlim(0, 1) + ylim(0,1) + xlab("2016 Democratic Presidential Vote") +ylab("2018 Democratic House Vote") + facet_wrap(~state, ncol=3)
+```
+
+---
+
+# Leave-one-out statistic
+
+- Calculate the leave-one-out statistic
+
+```{r, warning=F, message=F}
+library(loo)
+```
+
+```{r, warning=F, messsage=F, cache=T}
+loo_varint <- loo(model_var_intercept, pars="log_lik")
+loo_varint$estimates
+```
+
+```{r, warning=F, messsage=F}
+loo_compare(loo_varint, loo_reg)
+```
+
+---
+
+# Varying intercepts model
+
+- Plot the deviations from the "grand mean" intercept by state
+
+```{r, fig.align="center",message=F, warning=F, fig.width=9, fig.height=7, echo=F}
+state_num_dict <- as.character(unique(as.factor(elections_county$state)))
+names(state_num_dict) <- stringr::str_c("alpha[", unique(as.numeric(as.factor(elections_county$state))), "]")
+alpha_plot <- mcmc_intervals(model_var_intercept, pars = names(state_num_dict)) + scale_y_discrete(labels=state_num_dict) +  geom_vline(xintercept=0, lty=2, col="black")
+alpha_plot
+```
+
+
+---
+
+# Varying slopes model
+
+- What if we allow all of the parameters to vary by group?
+
+$$\beta_j \sim \text{Normal}(\mu_{\beta}, \Sigma_{\beta})$$
+$$Y_{ij} \sim \text{Normal}(X_{ij}^{\prime}\beta_{j}, \sigma^2)$$
+
+- This is a more general and flexible hierarchical model
+  - But introduces a slight complication -- we now need a prior distribution on an entire **matrix** $\Sigma_{\beta}$ (the variances and covariances of the parameters).
+--
+
+- The conjugate prior is the inverse-Wishart, the multivariate extension of the inverse-gamma.
+  - An alternative non-conjugate prior (that appears to have better performance) is a scaled correlation matrix with an LKJ prior on the correlation matrix (see Stan documentation for more).
+  - The latter is now preferred (especially by the Stan programmers)
+
+---
+
+# Varying slopes model
+
+- Our prior on $\Sigma_{\beta}$ starts by decomposing $\Sigma_{\beta}$ into a diagonal scaling matrix $\text{diag}(\tau)$ and a correlation matrix $\Omega$
+
+$$\Sigma_{\beta} = \text{diag}(\tau)\Omega\text{diag}(\tau)$$
+--
+
+- For each $\tau_k$ we'll use a Half-Cauchy distribution (Cauchy with the constraint $\tau_k > 0$)
+- For $\Omega$, we'll use the Lewandowski-Kurowicka-Joe (LKJ) distribution which defines a distribution over symmetric positive definite matrices
+  - **Intuition**: Similar to a beta distribution in multiple dimensions.
+  
+---
+
+# Varying slopes model
+
+- Our `data` block
+
+```{stan output.var='data.slope', eval=F, tidy=F}
+data{
+  int N; // number of observations
+  int J; // Number of groups
+  int K; // number of covariates
+  array[N] int J_i; // group membership indicator
+  matrix[N, K] X; //matrix of covariates
+  vector[N] y; //outcome
+}
+```
+
+---
+
+# Varying slopes model
+
+- Our `parameters` field
+
+```{stan output.var='param.slope', eval=F, tidy=F}
+parameters{
+  corr_matrix[K] Omega; //prior correlation
+  vector<lower=0>[K] tau; //prior scale
+  vector[K] mu_beta;
+  array[J] vector[K] beta; //group-level coefficients
+  real<lower = 0> sigma; // variance parameters
+}
+```
+
+---
+
+# Varying slopes model
+
+- And our `model`
+
+```{stan output.var='model.slope', eval=F, tidy=F}
+model{
+  tau ~ cauchy(0, 2.5);
+  Omega ~ lkj_corr(2);
+  sigma ~ inv_gamma(0.001/2, 0.001/2); //Inverse-gamma
+  mu_beta ~ normal(0, 9);
+  beta ~ multi_normal(mu_beta, quad_form_diag(Omega, tau));
+  for (n in 1:N) {
+    y[n] ~ normal(X[n] * beta[J_i[n]], sigma);
+  }
+}
+```
+
+---
+
+# Varying slopes model
+
+- Run it in Stan
+
+```{r, echo=F}
+varying_slopes <- "
+data{
+  int N; // number of observations
+  int J; // Number of groups
+  int K; // number of covariates
+  array[N] int J_i; // group membership indicator
+  matrix[N, K] X; //matrix of covariates
+  vector[N] y; //outcome
+}
+parameters{
+  corr_matrix[K] Omega; //prior correlation
+  vector<lower=0>[K] tau; //prior scale
+  vector[K] mu_beta;
+  array[J] vector[K] beta; //group-level coefficients
+  real<lower = 0> sigma; // variance parameters
+}
+model{
+  tau ~ cauchy(0, 2.5);
+  Omega ~ lkj_corr(2);
+  sigma ~ inv_gamma(0.001/2, 0.001/2); //Inverse-gamma
+  mu_beta ~ normal(0, 9);
+  beta ~ multi_normal(mu_beta, quad_form_diag(Omega, tau));
+  for (n in 1:N) {
+    y[n] ~ normal(X[n] * beta[J_i[n]], sigma);
+  }
+}
+generated quantities {
+  array[N] real y_rep;
+  for (n in 1:N){
+    y_rep[n] = normal_rng(X[n]*beta[J_i[n]], sigma);
+  }
+  vector[N] log_lik;
+  for (n in 1:N) log_lik[n] = normal_lpdf(y[n] | X[n]*beta[J_i[n]], sigma);
+}
+"
+```
+
+
+```{r, echo=T, message=F, warning=F, cache=T, results=F}
+model_var_slope <- stan(
+  model_code = varying_slopes,  # Stan code
+  data = varying_intercepts_data,    # named list of data
+  chains = 4,             # number of Markov chains
+  warmup = 500,          # number of warmup iterations per chain
+  iter = 2500,            # total number of iterations per chain
+  cores = 4,  
+  refresh=0,          # no progress shown
+  seed = 60637          # random seed
+  )
+```
+
+---
+
+# Varying intercepts model
+
+- Summarize the fit
+
+```{r}
+print(model_var_slope, pars=c("mu_beta"))
 ```
 
 ---
