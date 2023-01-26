@@ -1337,12 +1337,85 @@ model_var_slope <- stan(
 
 ---
 
-# Varying intercepts model
+# Varying slopes model
 
 - Summarize the fit
 
 ```{r}
 print(model_var_slope, pars=c("mu_beta"))
+```
+
+---
+
+# Varying slopes model
+
+- Pull the `y_rep` from the model (in the form of a list)
+
+```{r}
+y_ppc_varslope <- rstan::extract(model_var_slope)$y_rep
+```
+
+
+- Calculate the upper and lower credible intervals
+
+```{r}
+y_ppc_ci_varslope <- t(apply(y_ppc_varslope, 2, function(x) quantile(x, c(.025, .975))))
+```
+
+
+- What's the share that cover the truth?
+
+```{r}
+cover_95_varint <- y_ppc_ci_varslope[,1]<Y&Y<y_ppc_ci_varslope[,2]
+mean(cover_95_varint)
+```
+
+
+---
+
+# Empirical density 
+
+- Posterior predictions vs. empirical density
+
+```{r, fig.align="center", fig.height=6, fig.width=8, warning=F, cache = T}
+bayesplot::ppc_dens_overlay(y = elections_county$dem2018, yrep = y_ppc_varslope[1:25,])
+```
+
+---
+
+# Outcome plots
+
+- Compare the regression lines
+
+```{r, echo=F}
+elections_county$lowerppdVS <- y_ppc_ci_varslope[,1]
+elections_county$upperppdVS <- y_ppc_ci_varslope[,2] 
+elections_county$groupMeanInt_2 <- colMeans(rstan::extract(model_var_slope, "beta")$beta[,,1])[elections_county$state_num]
+elections_county$groupMeanSlope_2 <- colMeans(rstan::extract(model_var_slope, "beta")$beta[,,2])[elections_county$state_num]
+```
+
+```{r, fig.align="center", fig.height=6, fig.width=11, warning=F,echo=F, cache=T}
+elections_county %>% filter(state %in% c("IL", "TX", "CA")) %>% ggplot(aes(y=dem2018, x=dem2016)) + geom_ribbon(aes(x=dem2016, ymin=lowerppdVS, ymax=upperppdVS), alpha=.2, col="orange") + geom_point(cex=.6, alpha=1, col="blue")  + geom_abline(aes(intercept=groupMeanInt_2, slope=groupMeanSlope_2), col="red",  lwd=1.5)  + geom_abline(aes(intercept=mean(rstan::extract(model_fit, "beta[1]")$`beta[1]`), slope=mean(rstan::extract(model_fit, "beta[2]")$`beta[2]`)), col="black", alpha=.4, lwd=1.5) + theme_bw() + xlim(0, 1) + ylim(0,1) + xlab("2016 Democratic Presidential Vote") +ylab("2018 Democratic House Vote") + facet_wrap(~state, ncol=3)
+```
+
+---
+
+
+# Leave-one-out statistic
+
+- Calculate the leave-one-out statistic
+
+```{r, warning=F, message=F}
+library(loo)
+```
+
+```{r, warning=F, messsage=F, cache=T}
+loo_varslope <- loo(model_var_slope, pars="log_lik")
+loo_varslope$estimates
+```
+
+```{r, warning=F, messsage=F}
+loo_compare(loo_varslope ,loo_varint, loo_reg)
 ```
 
 ---
