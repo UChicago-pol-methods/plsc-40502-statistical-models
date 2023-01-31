@@ -1,0 +1,33 @@
+gender_bin,age_bin,educ_bin,Count
+Female,18-29,College graduate,5184687
+Female,18-29,H.S. or less,8999653
+Female,18-29,Postgraduate,1360817
+Female,18-29,Some college,10705093
+Female,30-44,College graduate,7780154
+Female,30-44,H.S. or less,9190813
+Female,30-44,Postgraduate,5265138
+Female,30-44,Some college,9510914
+Female,45-64,College graduate,8516942
+Female,45-64,H.S. or less,15618228
+Female,45-64,Postgraduate,5368890
+Female,45-64,Some college,13334531
+Female,65+,College graduate,4039588
+Female,65+,H.S. or less,14252312
+Female,65+,Postgraduate,3048669
+Female,65+,Some college,7755438
+Male,18-29,College graduate,4241843
+Male,18-29,H.S. or less,12146715
+Male,18-29,Postgraduate,907345
+Male,18-29,Some college,10121888
+Male,30-44,College graduate,6782968
+Male,30-44,H.S. or less,12179267
+Male,30-44,Postgraduate,3941494
+Male,30-44,Some college,8967152
+Male,45-64,College graduate,7548578
+Male,45-64,H.S. or less,17109326
+Male,45-64,Postgraduate,4918885
+Male,45-64,Some college,11245509
+Male,65+,College graduate,4099375
+Male,65+,H.S. or less,9545728
+Male,65+,Postgraduate,3614566
+Male,65+,Some college,5994025

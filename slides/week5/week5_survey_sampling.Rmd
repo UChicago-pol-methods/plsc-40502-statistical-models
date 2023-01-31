@@ -1,0 +1,358 @@
+---
+title: "Week 5: Surveys and Weighting"
+subtitle: "PLSC 40502 - Statistical Models"
+# author: "Anton Strezhnev"
+output: 
+  xaringan::moon_reader:
+    self_contained: true
+    css: [default, uchicago_pol_meth.css]
+    nature:
+      highlightLines: true
+      ratio: '16:9'
+      
+---
+class: title-slide
+
+# Review
+$$
+  \require{cancel}
+  \DeclareMathOperator*{\argmin}{arg\,min}
+$$
+  
+```{r, echo = F, message=F, warnings=F}
+library(tidyverse)
+library(haven)
+library(estimatr)
+library(knitr)
+
+options(digits=3)
+
+```
+
+---
+
+# Previously
+
+$$
+  \DeclareMathOperator*{\argmax}{arg\,max}
+$$
+
+- **Stan**
+
+--
+
+- **Diagnosing model fit**
+
+---
+
+# This week
+
+- **Survey weighting and post-stratification**
+--
+
+- **Combining multilevel regression and post-stratification**
+
+---
+
+---
+class: title-slide
+
+# Survey sampling
+
+---
+
+# Surveys
+
+- A common task in survey research is estimating an unknown population parameter $\theta$ from a sample of respondents $i \in \{1, 2, 3, \dotsc, N\}$
+  - What share of voters in Michigan plan to vote for Joe Biden in the 2020 election?
+  - What is the share of adults who are vaccinated in each U.S. county?
+  - What share of residents in Nevada plan to vote in the 2024 general election?
+---
+
+- Historically, two approaches to survey sampling design
+  - **Quota sampling** - Define a set of known demographic targets and obtain samples to 
+  - **Random sampling**
+---
+
+# Non-response
+
+- Survey research
+
+
+---
+
+# Example: CCES 2020
+
+- Let's dive in to the 2020 CCES. 
+
+```{r, warning=F, message=F}
+library(survey)
+cces <- read_csv("data/CCES_subset.csv") %>% filter(!is.na(trumpApprove))
+```
+
+- We'll be using a subset of the outcome data, looking at the share of respondents who state that they strongly or somewhat approve of then-President Donald Trump.
+--
+
+- Start by making a `svydesign` object - we'll pretend that the sampling weights don't exist for now
+
+```{r}
+cces_surv_unwt <- svydesign(~1, weights = ~1, data=cces)
+```
+
+--
+
+- In-sample, what's the proportion of respondents who approve of Trump?
+
+```{r}
+svymean(~trumpApprove, design=cces_surv_unwt)
+```
+
+---
+
+# Example: CCES 2020
+
+- How does this compare to the properly weighted mean?
+
+```{r}
+cces_surv_wt <- svydesign(~1, weights = ~commonweight, data=cces)
+svymean(~trumpApprove, design=cces_surv_wt)
+```
+
+- Trump's approval is a few points higher after the weighting adjustment.
+
+- From the CCES Guide:
+
+> the completed cases were weighted to the sampling frame using entropy balancing. The 2019
+ACS was used as the frame for weighting the common content and the team samples. The
+CES sample was weighted to match the distributions of the 2019 ACS on gender, age, race,
+Hispanic origin, and education level.
+> The moment conditions included age, gender, education, race, plus their interactions. The
+resultant weights were then post-stratified by age, gender, education, race, “born again"
+status, voter registration status, 2016 Presidential vote choice, and 2020 Presidential vote
+choice as needed.
+
+---
+
+# Population targets
+
+- We'll be using the 2020 ACS 5-year Public Use Microdata Sample
+  - Obtain the complete **joint** distribution of region, race, age, gender and education in the U.S.
+
+```{r, message=F, warning=F}
+acs_targets <- read_csv("data/ACS_2020_microdata_3cat.csv")
+```
+
+
+- What's the **marginal** distribution of education in the target population?
+
+```{r}
+acs_targets %>% group_by(educ_bin) %>% summarize(n = sum(Count)) %>% ungroup() %>% mutate(prop = n/sum(n))
+```
+---
+# Population targets
+
+- How does it compare to the **unweighted** marginal distribution in the sample?
+
+```{r}
+cces %>% group_by(educ_bin) %>% summarize(n = n()) %>% ungroup() %>% mutate(prop = n/sum(n))
+```
+
+---
+
+# Population targets
+
+- What about the **joint** distribution of gender and education?
+--
+
+- In the **population**
+
+```{r, message=F}
+acs_targets %>% group_by(educ_bin, gender_bin) %>% summarize(n = sum(Count)) %>% ungroup() %>% mutate(prop = n/sum(n))
+```
+
+---
+
+# Population targets
+
+- In the **sample**
+
+```{r, message=F}
+cces %>% group_by(educ_bin, gender_bin) %>% summarize(n = n()) %>% ungroup() %>% mutate(prop = n/sum(n))
+```
+
+---
+
+# Post-stratification
+
+- We can also construct the post-stratification weights manually
+  - Start by calculating the population proportions in each bin
+
+```{r}
+acs_targets <- acs_targets %>% mutate(strata = str_c(gender_bin, educ_bin, age_bin, sep="-"),
+                                      pop_proportion = Count/sum(Count))
+```
+--
+
+- Do the same for the sample
+
+```{r}
+cces <- cces %>% mutate(strata = str_c(gender_bin, educ_bin, age_bin, sep="-"))
+cces_strat <- cces %>% group_by(strata) %>% summarize(n=n()) %>% ungroup() %>% mutate(samp_proportion = n/sum(n))
+```
+--
+
+- Join the datasets
+
+```{r}
+cces <- cces %>% left_join(acs_targets%>% select(strata, pop_proportion), by="strata")
+cces <- cces %>% left_join(cces_strat %>% select(strata, samp_proportion), by="strata")
+```
+
+---
+
+# Post-stratification
+
+- Construct the post-stratification weights
+
+```{r}
+cces <- cces %>% mutate(postStratWt = pop_proportion/samp_proportion)
+```
+
+- Take the weighted average to estimate Trump Approval
+
+```{r}
+weighted.mean(cces$trumpApprove, cces$postStratWt)
+```
+
+---
+
+
+# Population targets
+
+- Did the weights equalize the distributions? Let's look again at the joint distribution of gender and education
+--
+
+- In the **population**
+
+```{r, message=F}
+acs_targets %>% group_by(educ_bin, gender_bin) %>% summarize(n = sum(Count)) %>% ungroup() %>% mutate(prop = n/sum(n))
+```
+
+--
+
+- In the re-weighted **sample**
+
+```{r, message=F}
+cces %>% group_by(educ_bin, gender_bin) %>% summarize(n = sum(postStratWt)) %>% ungroup() %>% mutate(prop = n/sum(n))
+```
+
+---
+
+# Post-stratification.
+
+- Create the post-stratification weights using `postStratify` in `survey`
+
+```{r}
+cces_postStrat <- postStratify(cces_surv_unwt, strata=~gender_bin + age_bin + educ_bin,
+                               population = acs_targets %>% select(gender_bin, age_bin, educ_bin, Freq = Count))
+```
+
+--
+
+- Then use `svymean`
+
+```{r}
+svymean(~trumpApprove, cces_postStrat)
+```
+
+  
+---
+
+# Post-stratification
+
+- Plotting our post-stratification weights against the actual CCES weights
+
+```{r, warning=F, message=F, fig.align="center", fig.width=8, fig.height=5}
+cces %>% ggplot(aes(x=postStratWt, y=commonweight)) + geom_point() + geom_smooth(method="lm") + theme_bw() +
+  xlab("Post-stratification weight") + ylab("CCES 2020 Weight")
+```
+
+---
+
+# Post-stratification
+
+- Note that we can combine survey design weights with additional post-stratification weights.
+  - For example, if we want to take a national survey and re-weight it to different demographic targets
+--
+
+- What happens if we combine our post-stratification weights with the CCES design weights
+
+```{r}
+cces_postStrat_wt <- postStratify(cces_surv_wt, strata=~gender_bin + age_bin + educ_bin,
+                               population = acs_targets %>% select(gender_bin, age_bin, educ_bin, Freq = Count))
+```
+
+--
+
+- Our estimated Trump approval is closer to that original 44 percent (as expected, since our post-stratification variables are a subset of all the covariates that go into the CCES weights)
+
+```{r}
+svymean(~trumpApprove, cces_postStrat_wt)
+```
+
+---
+
+# Raking
+
+- Sometimes we only know the marginals and not the joint distributions. We can still construct weights that get us balance on the *marginals*.
+- Start by generating the marginal counts (in the real world, these would be **all** that we have).
+
+```{r}
+acs_marginals <- list()
+acs_marginals[["gender_bin"]] <- acs_targets %>% group_by(gender_bin) %>% summarize(Freq = sum(Count))
+acs_marginals[["age_bin"]] <- acs_targets %>% group_by(age_bin) %>% summarize(Freq = sum(Count))
+acs_marginals[["educ_bin"]] <- acs_targets %>% group_by(educ_bin) %>% summarize(Freq = sum(Count))
+```
+
+--
+
+- Make the raking design
+
+```{r}
+cces_rake_unwt <- rake(cces_surv_unwt, sample.margins = list(~gender_bin, ~age_bin, ~educ_bin), 
+                       population.margins=acs_marginals)
+cces$rakeWt <- weights(cces_rake_unwt) 
+```
+
+--
+
+- In this case, we actually do about as well as when we have the full joint distribution!
+
+```{r}
+svymean(~trumpApprove, cces_rake_unwt)
+```
+
+---
+
+# Raking
+
+- Note that raking will **not** guarantee balance on the full joint distribution
+
+
+- In the **population**
+
+```{r, message=F}
+acs_targets %>% group_by(educ_bin, gender_bin) %>% summarize(n = sum(Count)) %>% ungroup() %>% mutate(prop = n/sum(n))
+```
+
+---
+
+# Raking
+
+- In the re-weighted **sample**
+
+```{r, message=F}
+cces %>% group_by(educ_bin, gender_bin) %>% summarize(n = sum(rakeWt)) %>% ungroup() %>% mutate(prop = n/sum(n))
+```
+
+---
