@@ -380,22 +380,34 @@ $$
 $$
 
 - **Stan**
-
+  - **Hamiltonian Monte Carlo** - use the gradient of the likelihood `\(\times\)` prior to get good M-H proposals
+    - Avoids proposals that are either too auto-correlated and too likely to be rejected
+  - Commmon structure to statistical modeling: `data`, `parameters`, `model`
+  - Frequently used models have canned routines in `rstanarm`
 --
 
 - **Diagnosing model fit**
+  - Posterior predictive checks
+  - **Information criteria** vs. **Cross-validation**
+  - log-predictive density as a measure of prediction quality (how much probability mass do we place on the &quot;correct&quot; outcome)
 
 ---
 
 # This week
 
 - **Survey weighting and post-stratification**
+  - The problem of non-response
+  - Using auxiliary variables to construct weights
+  - Post-stratification vs. raking
+--
+
+- **Calibration weighting**
+  - Generalizing post-stratification-style adjustments to allow for a variety of balance conditions
 --
 
 - **Combining multilevel regression and post-stratification**
-
----
-
+  - Using multi-level models and population-level information to estimate quantities for **small areas**
+  
 ---
 class: title-slide
 
@@ -409,18 +421,166 @@ class: title-slide
   - What share of voters in Michigan plan to vote for Joe Biden in the 2020 election?
   - What is the share of adults who are vaccinated in each U.S. county?
   - What share of residents in Nevada plan to vote in the 2024 general election?
----
+--
 
 - Historically, two approaches to survey sampling design
-  - **Quota sampling** - Define a set of known demographic targets and obtain samples to 
-  - **Random sampling**
+  - **Quota sampling** - Define a set of known demographic targets and recruit respondents to match.
+  - **Probability sampling** - Select respondents from a **sampling frame** at random with a known probability.
+--
+
+- Dominance of **probability sampling** in the late 20th century
+  - Random Digit Dialing allowed for (near)-simple random samples from the U.S. adult population
+  - High response rates
+
 ---
 
-# Non-response
+# Decline of pure probability samples
 
-- Survey research
+- Two big factors have lead to the decline of exclusively probability-based sampling approaches
+  - Decline in population coverage - fewer individuals have landlines!
+  - Extremely high non-response rates.
+--
 
+- Non-random non-response can bias our estimates
+  - Non-responders have different characteristics to the responders that may be correlated with the target quantity of interest.
+  - Huge concern in recent efforts to poll elections (e.g. &quot;shy tories&quot;)
+--
 
+- Modern polling
+  - Combine probability and quota approaches
+  - Weighting ex-post to match population targets.
+
+---
+
+# Survey inference
+
+- Our goal is to estimate some parameter `\(\theta_{y}\)` related to a population outcome variable `\(y\)` (e.g. a proportion, mean, median, etc...)
+- We construct an estimator `\(\hat{\theta}_{y}\)` 
+  - For population means, we&#39;ll use a sample mean, etc...
+--
+
+- In addition to the outcome of interest `\(y\)`, we observe **auxiliary** variables `\(\mathbf{x}\)`
+  - Units are sampled from some unknown target population `\(f_{\mathcal{U}}(y, \mathbf{x})\)`
+  - The in-sample distribution of the **responders** is denoted `\(g_{\mathcal{R}}(y, \mathbf{x})\)`
+--
+
+- Our auxiliary information involves some **known features** of the target distribution: `\({\breve{I}}_{\mathbf{x}}\)`
+  - We&#39;ll use this to construct **targets** for the population distribution `\(\tilde{T}_{\mathbf{x}} = \{ \tilde{T}_{\mathbf{x}1}, \dotsc, {\tilde{T}}_{\mathbf{x}M}\}\)`
+  - For example, suppose we know the full population distribution of age, gender, education, income, and party ID
+--
+
+- In some settings, the auxiliary distribution maps easily to the target - but in other settings we have to use the auxiliary information to **estimate** our target
+  - (e.g) we might have features of our target distribution but we don&#39;t know who will turn out to **vote** before the election
+  - &quot;Likely voter models&quot; are a **target estimation** problem
+
+---
+
+# Inference with known sampling weights
+
+- If we know the probability that a unit is selected into the sample from the sample frame `\(\pi_i\)`, it is straightforward to construct an estimator `\(\hat{\theta_{y}}\)` of the population mean `\(\theta_{y}\)`.
+- The **Horvitz-Thompson** estimator weights each unit by `\(d_i = \frac{1}{\pi_i}\)`, the inverse probability of being selected into the sample
+
+`$$\hat{\theta_{y}}^{\text{HT}} = \frac{\sum_{i=1}^N d_i Y_i}{\mathbb{E}[\sum_{i=1}^n d_i]}$$`
+
+- When sampling probabilities are equivalent, this reduces to the sample mean.
+--
+
+- More commonly, rather than using the expectation of the weights in the denominator, we&#39;ll use the actual observed sum of the weights, giving the Hajek estimator
+
+`$$\hat{\theta_{y}}^{\text{H}} = \frac{\sum_{i=1}^N d_i Y_i}{\sum_{i=1}^n d_i}$$`
+---
+
+# Unknown sampling weights
+
+- When `\(d_i\)` is not known, we will need to estimate **adjustment weights** using a combination of modeling assumptions and auxiliary data
+  - Even when `\(d_i\)` is known, if non-response is high, we still don&#39;t know the probability of selection into the **observed** data `\(\rho_i\)`
+--
+
+- With adjustment weights `\(\tilde{w}_i\)`, our Hajek estimator becomes
+
+`$$\hat{\theta_{y}}^{\text{W}} = \frac{\sum_{i=1}^N \tilde{w}_i Y_i}{\sum_{i=1}^n \tilde{w}_i}$$`
+--
+
+- Now the weights are not necessarily known but must be obtained from our population targets `\(\tilde{T}_{\mathbf{x}}\)`
+
+---
+
+# Post-stratification
+
+- The easiest approach to adjusting a non-representative survey is to weight to match the **known** **joint** distribution of `\(x\)` in the population `\(f_{\mathcal{U}}(\mathbf{x})\)`
+  - This requires a lot of auxiliary information about the target `\(f_{\mathcal{U}}(\mathbf{x})\)` - typically obtained from high-quality census data
+  - (e.g.) U.S. Census Public-Use Microdata: What is the share of Black, college educated, 30-45 year olds in Massachusetts?
+--
+
+- In post-stratification, we divide our sample up into `\(C\)` **cells** `\(c\)` that are mutually exclusive and exhaustive.
+  - `\(\tilde{T}_{\mathbf{x}} = \{\tilde{P}_{1}, \tilde{P}_2, \dotsc, \tilde{P}_{C}\}\)` is our population distribution of these cells
+--
+
+- Our **sampling/response model** assumes that **within** each of these cells we have a simple-random sample from that particular stratum of the population
+  - There may be variation in non-response or over/under-sampling, but only **across** cells
+  - &quot;post&quot;-stratification because the intuition is akin to a design where we actually *did* stratify ex-ante
+--
+
+- Our **measurement model** assumes we observe the joint distribution of auxiliary variables `\(\mathbf{x}\)` in the target population
+  - Difficult in many cases!
+  
+---
+
+# Post-stratification
+
+- Two ways to think of post-stratification:
+- **First** - Let `\(\hat{\theta}_{y}^{c}\)` denote our estimator for the population mean **within** cell `\(c\)` (possibly using design weights `\(d_i\)`)
+  - Then, our post-stratification estimator `\(\hat{\theta}_{y}^{PS}\)` is:
+  
+`$$\hat{\theta}_{y}^{PS} = \sum_{c=1}^C \tilde{P}_{c} \hat{\theta}_{y}^{c}$$`
+--
+
+- Alternatively, we&#39;ll sometimes write `\(\tilde{P}_c = \frac{\tilde{N}_c}{\tilde{N}}\)` where `\(\tilde{N}\)` is the size of the population and `\(\tilde{N}_c\)` is the number of units in that cell.
+
+`$$\hat{\theta}_{y}^{PS} = \sum_{c=1}^C \frac{\tilde{N}_c}{\tilde{N}} \hat{\theta}_{y}^{c}$$`
+
+--
+
+- Fixed &quot;constant&quot; weights on the within-cell estimators.
+
+---
+
+# Post-stratification
+
+- **Second** - We can think of it as weighting individual observations using our adjustment weights `\(\tilde{w}^{PS}_i\)`
+- Let `\(c(i)\)` denote the class to which unit `\(i\)` belongs. Then the post-stratification weights are
+
+`$$\tilde{w}^{PS}_i = (\tilde{P}_{c(i)}/\hat{P}^{S}_{c(i)}) \times d_i$$`
+
+where `\(\hat{P}^{S}_{c(i)}\)` is the estimated **in-sample** proportion of observations in class `\(c\)` 
+--
+
+- When design weights are constant, `\(\hat{P}^{S}_{c(i)}\)` is just the sample mean of the indicator of class membership `\(\mathcal{1}_{i \in c}\)` 
+  - More generally, you can write it as `\(\hat{P}^{S}_{c(i)} = (\sum_{i=1}^N  d_i \mathcal{1}_{i \in c})/(\sum_{i=1}^N d_i)\)`
+--
+
+- **Intuition**
+  - The weights **up-weight** observations that are under-represented in the sample relative to the target population
+  - The weights **down-weight** observations that are over-represented in the sample relative to the target population.
+
+---
+
+# Raking
+
+- Often post-stratification with many covariates is challenging!
+  - The number of cells grows rapidly as we add more covariates 
+  - e.g. gender x party x state = 2 x 3 x 50 = 300 cells!
+--
+
+- Sometimes our population data only give us the marginal distributions but not the joint distributions
+- **Raking** weights are designed to match the marginal distribution of the auxiliary covariate **in-sample**
+  - No closed-form expression, but iterative algorithms exist to compute raking weights.
+  
+--
+- **Intuition**
+  - Raking works well when things are additive
+  - Doesn&#39;t work as well when things are **interactive**
+  
 ---
 
 # Example: CCES 2020
@@ -644,7 +804,6 @@ weighted.mean(cces$trumpApprove, cces$postStratWt)
 
 ---
 
-
 # Population targets
 
 - Did the weights equalize the distributions? Let&#39;s look again at the joint distribution of gender and education
@@ -671,7 +830,9 @@ acs_targets %&gt;% group_by(educ_bin, gender_bin) %&gt;% summarize(n = sum(Count
 ## 8 Some college     Male       36328574 0.143
 ```
 
---
+---
+
+# Population targets
 
 - In the re-weighted **sample**
 
