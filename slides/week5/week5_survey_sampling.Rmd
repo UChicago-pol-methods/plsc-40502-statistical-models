@@ -233,8 +233,8 @@ where $\hat{P}^{S}_{c(i)}$ is the estimated **in-sample** proportion of observat
 - Sometimes our population data only give us the marginal distributions but not the joint distributions
 - **Raking** weights are designed to match the marginal distribution of the auxiliary covariate **in-sample**
   - No closed-form expression, but iterative algorithms exist to compute raking weights.
-  
 --
+
 - **Intuition**
   - Raking works well when things are additive
   - Doesn't work as well when things are **interactive**
@@ -248,6 +248,7 @@ where $\hat{P}^{S}_{c(i)}$ is the estimated **in-sample** proportion of observat
 ```{r, warning=F, message=F}
 library(survey)
 cces <- read_csv("data/CCES_subset.csv") %>% filter(!is.na(trumpApprove))
+cces$educ_bin[cces$educ_bin == "College degree"] <- "College graduate" # Fix a naming inconsistency 
 ```
 
 - We'll be using a subset of the outcome data, looking at the share of respondents who state that they strongly or somewhat approve of then-President Donald Trump.
@@ -296,7 +297,7 @@ choice as needed.
 # Population targets
 
 - We'll be using the 2020 ACS 5-year Public Use Microdata Sample
-  - Obtain the complete **joint** distribution of region, race, age, gender and education in the U.S.
+  - Obtain the complete **joint** distribution of age, gender and education in the U.S.
 
 ```{r, message=F, warning=F}
 acs_targets <- read_csv("data/ACS_2020_microdata_3cat.csv")
@@ -308,7 +309,9 @@ acs_targets <- read_csv("data/ACS_2020_microdata_3cat.csv")
 ```{r}
 acs_targets %>% group_by(educ_bin) %>% summarize(n = sum(Count)) %>% ungroup() %>% mutate(prop = n/sum(n))
 ```
+
 ---
+
 # Population targets
 
 - How does it compare to the **unweighted** marginal distribution in the sample?
@@ -344,7 +347,7 @@ cces %>% group_by(educ_bin, gender_bin) %>% summarize(n = n()) %>% ungroup() %>%
 
 # Post-stratification
 
-- We can also construct the post-stratification weights manually
+- We can construct the post-stratification weights manually
   - Start by calculating the population proportions in each bin
 
 ```{r}
@@ -411,7 +414,7 @@ cces %>% group_by(educ_bin, gender_bin) %>% summarize(n = sum(postStratWt)) %>% 
 
 # Post-stratification.
 
-- Create the post-stratification weights using `postStratify` in `survey`
+- We can also use the `survey` package - create the post-stratification weights using `postStratify` in `survey`
 
 ```{r}
 cces_postStrat <- postStratify(cces_surv_unwt, strata=~gender_bin + age_bin + educ_bin,
@@ -482,7 +485,7 @@ acs_marginals[["educ_bin"]] <- acs_targets %>% group_by(educ_bin) %>% summarize(
 ```{r}
 cces_rake_unwt <- rake(cces_surv_unwt, sample.margins = list(~gender_bin, ~age_bin, ~educ_bin), 
                        population.margins=acs_marginals)
-cces$rakeWt <- weights(cces_rake_unwt) 
+cces$rakeWt <- (weights(cces_rake_unwt)/sum(weights(cces_rake_unwt)))*nrow(cces)
 ```
 
 --
@@ -517,3 +520,436 @@ cces %>% group_by(educ_bin, gender_bin) %>% summarize(n = sum(rakeWt)) %>% ungro
 ```
 
 ---
+
+# Raking vs. Post-stratification
+
+- How do the raking and post-stratification weights compare?
+
+```{r, warning=F, message=F, fig.align="center", fig.width=8, fig.height=5}
+cces %>% ggplot(aes(x=postStratWt, y=rakeWt)) + geom_point() + geom_smooth(method="lm") + theme_bw() +
+  xlab("Post-stratification weight") + ylab("Raking weight")
+```
+
+---
+
+class: title-slide
+
+# Calibration Weighting
+
+---
+
+# Calibration
+
+- The choice of weights in a survey can be framed more generally as a **calibration** problem
+- Find the set of weights $\tilde{w}_i$ that minimize some distance measure
+
+$$L(\tilde{w}, d) = \sum_{i=1}^N D(\tilde{w}_i, d_i)$$
+
+subject to $K$ constraints
+
+$$\tilde{T}_{\mathbf{x}k} = \sum_{i=1}^N \tilde{w}_i z_{ik}$$
+
+and
+
+$$\sum_{i=1}^N \tilde{w}_i = 1$$
+$$\tilde{w}_i \ge 0, \ i = 1, \dotsc, n$$
+---
+
+# Calibration
+
+- Our constraints are defined in terms of population targets $\tilde{T}_{\mathbf{x}k}$ and sample quantities $z_{ik}$ 
+  - $z_{ik}$ is some transformation of the auxiliary variable $x_{ik}$
+  - Typically just the identity, but we could consider higher-order moments with continuous covariates.
+--
+
+- **Intuition**: Generalizing raking to also include continuous variables
+  - Match **sample moments** to **population moments**
+
+---
+
+# Calibration
+
+- What is this distance metric and how do we choose it?
+- Lots of different ways to weight the sample to match a set of moment constraints. 
+  - But some weights are better than others!
+--
+
+- One popular distance metric is the **entropy loss**:
+
+$$L(\tilde{w}, d) = \sum_{i=1}^N \tilde{w}_i \log\bigg(\frac{\tilde{w}_i}{d_i}\bigg)$$
+--
+
+- Equivalent to the Kullback-Leibler divergence between the distribution of the new weights and the original design weights (often uniform)
+  - Without any constraints, this is minimized at the design weights
+--
+
+- **Intuition**: If the moment conditions are met, we prefer weights that are closer to uniform (or the original design weights) to minimize the loss of power to weighting
+- Alternative metrics: squared distance
+
+$$L(\tilde{w}, d) = \frac{1}{2}\sum_{i=1}^N (\tilde{w}_i - d_i)^2$$
+---
+
+# Effective sample size
+
+- Kish (1965) proposed a formula for the "effective sample size" of a weighted mean:
+
+$$ESS = \frac{(\sum_{i=1}^N \tilde{w}_i)^2}{\sum_{i=1}^n \tilde{w}_i^2}$$
+--
+
+- Intuitively, this is maximized at uniform weights and becomes smaller as the weights become more imbalanced
+  - Extremely large weights on a single observation lead to a **huge** loss of efficiency
+  - Typically we see weights "winsorized" or cut-off to avoid these losses
+
+---
+
+# Example: Calibrating with Party ID
+
+- We have data on party ID in the population as well.
+  - From [Pew Research](https://www.pewresearch.org/politics/2020/06/02/in-changing-u-s-electorate-race-and-education-remain-stark-dividing-lines/) we have **gender** x **party** for registered voters in 2020
+--
+
+- But we don't have the full **party** x **age** x **gender** x **education** interaction (at least without additional research)
+--
+
+- So how do we weight to two partially overlapping datasets?
+  1. *Census*: **Gender** x **Age** x **Education**
+  2. *Pew*: **Party** x **Gender**
+--
+
+- Let's use **entropy balancing** to construct weights that match both sets of joint distributions
+
+---
+
+# Example: Calibrating with Party ID
+
+- From our Pew Party ID data
+
+```{r, warning=F, message=F}
+pew_party <- read_csv("data/pew_2020_party_gender.csv") %>% mutate(share = share/100) %>% rename(gender_bin = gender, party_bin = party)
+pew_party
+```
+
+- Let's convert this into the **joint** distribution using the known age distribution
+
+```{r}
+pew_party$Freq <- pew_party$share*(acs_marginals[["gender_bin"]]$Freq/sum(acs_marginals[["gender_bin"]]$Freq))[1]
+pew_party$Freq[pew_party$gender_bin == "Male"] <- pew_party$share[pew_party$gender_bin == "Male"]*(acs_marginals[["gender_bin"]]$Freq/sum(acs_marginals[["gender_bin"]]$Freq))[2]
+pew_party <- pew_party %>% select(-share)
+```
+
+---
+
+# Example: Calibrating with Party ID
+
+- Next, we'll recode our Party ID variable in the CCES to match
+
+```{r}
+cces <- cces %>% mutate(party_bin = case_when(party_id == 1 ~ "Democratic",
+                                              party_id == 2 ~ "Republican",
+                                              party_id == 3 ~ "Independent",
+                                              party_id == 4 ~ "Other",
+                                              party_id == 5 ~ "Other",
+                                              is.na(party_id) ~ "Other"))
+```
+
+
+---
+
+
+# Example: Calibrating with Party ID
+
+- Our **population target** distribution of gender and party ID
+
+```{r, message=F}
+pew_party  %>% group_by(gender_bin, party_bin)  %>% summarize(n=Freq[1])
+```
+
+---
+
+# Example: Calibrating with Party ID
+
+- Our **in-sample** distribution of gender and party ID
+
+```{r, message=F}
+cces %>% group_by(gender_bin, party_bin) %>% summarize(n = n()) %>% ungroup() %>% mutate(prop = n/sum(n)) %>% select(-n)
+```
+
+---
+
+# Example: Calibrating with Party ID
+
+- Post-stratification on age x gender x education wasn't quite enough (in fact, we did *worse* for some bins)
+
+```{r, message=F}
+cces %>% group_by(gender_bin, party_bin) %>% summarize(n = sum(postStratWt)) %>% ungroup() %>% mutate(prop = n/sum(n)) %>% select(-n)
+```
+
+---
+
+# Example: Calibrating with Party ID
+
+- Setting up our entropy-weighting targets
+
+```{r}
+calibration_targets <- acs_targets %>% arrange(strata) %>% pull(pop_proportion)
+names(calibration_targets) <- colnames(model.matrix(~strata, acs_targets))
+calibration_targets[1] <- 1 # Weights sum to 1 ("intercept")
+pew_targets <- pew_party %>% mutate(strata2 = str_c(gender_bin, party_bin,sep="-")) %>% select(strata2, Freq) 
+calibration_targets_2 <- pew_targets %>% arrange(strata2) %>% pull(Freq)
+names(calibration_targets_2) <- colnames(model.matrix(~strata2, pew_targets))
+calibration_targets <- c(calibration_targets, calibration_targets_2[-1])
+```
+
+- Make the same strata in our dataset
+
+```{r}
+cces$strata2 <- str_c(cces$gender_bin, cces$party_bin, sep="-")
+```
+
+- Find the entropy weights
+
+```{r}
+cces$strata <- as.factor(cces$strata)
+cces$strata2 <- as.factor(cces$strata2)
+cces_surv_unwt <- svydesign(~1, weights = ~1, data=cces)
+cces_entropy <- calibrate(cces_surv_unwt, formula = ~strata + strata2,
+                       population=calibration_targets*nrow(cces), calfun="raking")
+cces$entropyWt <- weights(cces_entropy)
+```
+
+
+---
+
+# Entropy weighting
+
+- Our **population target** distribution of gender and party ID
+
+```{r, message=F}
+pew_party  %>% group_by(gender_bin, party_bin)  %>% summarize(n=Freq[1])
+```
+
+---
+
+# Entropy weighting
+
+- Our **post-weighting** distribution of gender and party ID
+
+```{r, message=F}
+cces %>% group_by(gender_bin, party_bin) %>% summarize(n = sum(entropyWt)) %>% ungroup() %>% mutate(prop = n/sum(n)) %>% select(-n)
+```
+
+---
+
+# Comparing the weights
+
+```{r, warning=F, message=F, fig.align="center", fig.width=8, fig.height=5}
+cces %>% ggplot(aes(x=postStratWt, y=entropyWt)) + geom_point() + geom_smooth(method="lm") + theme_bw() +
+  xlab("Post-stratification weight") + ylab("Entropy balancing weight")
+```
+
+---
+
+# Results
+
+- Now that we've adjusted for party ID, we actually get closer to the right answer!
+
+```{r}
+svymean(~trumpApprove, cces_entropy)
+```
+
+- And what's our effective sample size relative to our actual sample size?
+
+```{r}
+ess_entropy <- (sum(cces$entropyWt)^2/sum(cces$entropyWt^2))
+ess_entropy
+```
+
+- How does this compare to our actual sample size (what's the efficiency loss?)
+
+```{r}
+ess_entropy/sum(cces$entropyWt)
+```
+
+---
+
+class: title-slide
+
+# MrP
+
+---
+
+# Multilevel Regression and Post-stratification
+
+- Often we're interested in estimating political attitudes at very small areas
+  - Within a nationally-representative sample, we may only have a minor fraction of respondents who are even in a particular region.
+--
+
+- Beyond that, our sample may not be demographically representative for a given region
+  - Can we do better than just using the sub-group means for our outcome of interest?
+
+---
+
+# CCES 2020
+
+- Our **unweighted** average Trump support for each state:
+
+```{r, echo = F, warning=F, message=F, fig.width=8, fig.height=6, fig.align="center"}
+library(usmap)
+library(ggplot2)
+library(viridis)
+state_summaries <- cces %>% group_by(inputstate) %>% summarize(values= mean(trumpApprove)*100) %>% rename(fips = inputstate) %>% mutate(fips = str_pad(fips, 2,pad="0"))
+plot_usmap(regions="states", data= state_summaries) + scale_fill_viridis(option="A",name = "Trump Approval", label = scales::comma) +
+  theme(legend.position = "right")
+```
+
+---
+
+# MrP
+
+- **Multilevel Regression** and **Post-stratification** combines two well-known tools to try to accomplish this task
+  1. **Multilevel regression**: Using the entire dataset, specify a flexible model for the outcome of interest
+  2. **Post-stratification**: Using known population characteristics, generate predictions for each covariate "cell" in each region
+--
+
+- The national-level regression allows us to improve **precision** in small-area estimation
+    - e.g. if some of the variability between regions is driven by individual or group-level characteristics, we can model the relationship between those characteristics and the outcome using **all** the data.
+--
+
+- The population-level data allows us to address non-response/sampling bias
+  - Ideally all of the variables that would go in the survey weighting model also go in the MrP model (so in principle we don't need to include survey weights in the analysis)
+
+---
+
+# MrP Workflow
+
+1. Get survey data that contains individual and group-level predictors (e.g. demographic characteristics + "small area" of residence)
+2. Get information on the "small areas" themselves 
+3. Estimate a multilevel regression model using these two sets of data
+4. Construct a post-stratification frame that has the joint distribution of our demographics for each "small area"
+5. Predict using the model for each cell in the post-stratification frame
+6. Aggregate to get predictions for each small area
+
+---
+
+# Example: CCES 2020
+
+- Let's fit a regression model 
+  - We'll use the `brms` package which has pre-existing implementations of popular models like the random slopes/random intercepts generalized linear mixed model
+--
+
+- We'll fit a simple logistic regression with coefficients on gender, age and education as well as a random intercept for state
+
+```{r, message=F, warning=F, results=F}
+library(brms)
+```
+
+```{r, cache=T, message=F, warning=F, results=F}
+state_mlm <- brm(trumpApprove ~ factor(gender_bin) + factor(age_bin) + factor(educ_bin) +  (1 | inputstate), 
+                           family = bernoulli(), data=cces, cores=4, warmup=1000, iter=2000)
+```
+
+---
+
+# Model diagnostics
+
+- Summarize the results
+
+```{r}
+summary(state_mlm)
+```
+
+---
+
+# Model diagnostics
+
+- Check convergence
+
+```{r, fig.align="center", fig.height=6, fig.width=10}
+plot(state_mlm, variable = "b_factorgender_binMale")
+```
+
+---
+
+# Generating the post-stratification frame
+
+- We'll use ACS 5-year microdata data at the state level to construct our post-stratification frame for each state
+
+```{r, message=F, warning=F}
+acs_state_targets <- read_csv("data/ACS_2020_microdata_by_state.csv") %>% filter(!is.na(Gender))
+fips_codes <- read_csv("data/us-state-ansi-fips.csv")
+acs_state_targets <- acs_state_targets %>% left_join(fips_codes, by=c(State="stname"))
+acs_state_targets$inputstate <- as.numeric(acs_state_targets$st)
+acs_state_targets <- acs_state_targets %>% pivot_longer(c(`18-29`, `30-44`, `45-64`, `65+`))
+acs_state_targets <- acs_state_targets %>% rename(gender_bin = Gender, educ_bin = Education, age_bin = name, Count=value)
+acs_state_targets <- acs_state_targets %>% mutate(prop_us = Count/sum(Count))
+acs_state_targets <- acs_state_targets %>% group_by(inputstate) %>% mutate(prop_state = Count/sum(Count)) %>% ungroup()
+```
+
+---
+
+# Generating the post-stratification frame
+
+- Each row contains a row for each **state** x **age** x **gender** x **education** combination
+
+```{r, message=F, warning=F}
+acs_state_targets
+```
+
+---
+
+# Predicting with the model
+
+- Use the model to make predictions on each row of our post-stratification frame
+
+```{r, message=F, warning=F}
+acs_state_targets$predict_mlm <- predict(state_mlm, newdata=acs_state_targets)[,1]
+```
+
+- Aggregate the predictions by the stratum shares to get state-level estimates!
+
+```{r}
+mrp_states <- acs_state_targets %>% group_by(st) %>% summarize(trumpApproveMLM = sum(predict_mlm*prop_state)*100) %>% rename(fips=st)
+```
+
+---
+
+# Compare
+
+- Use the model to make predictions on each row of our post-stratification frame
+
+```{r, message=F, warning=F}
+state_summaries %>% left_join(mrp_states, by="fips")
+```
+
+---
+
+# Visualize
+
+- Our **multilevel regression + post-stratification** estimates
+
+```{r, echo = F, warning=F, message=F, fig.width=8, fig.height=6, fig.align="center"}
+plot_usmap(regions="states", data= mrp_states, values="trumpApproveMLM") + scale_fill_viridis(option = "A", name = "Trump Approval", label = scales::comma) +
+  theme(legend.position = "right")
+```
+
+---
+
+# How to improve this model
+
+- We've provided a very simple example of an MrP model but there are a lot of ways it can be improved
+  1. More group-level predictors (e.g. Trump state-level vote share)
+  2. Individual-level interactions in the model + partial-pooling on the coefficients
+  3. Actually knowing the joint distribution of the demographics in each state!
+  4. Pool state-level means to regional rather than a common "grand" mean.
+  5. Many more possibilities...
+--
+
+- More generally, we have a dataset where even within each state, we have many observations to work with, so the model isn't that necessary
+  - MrP is most powerful when there are **very few** respondents from a particular small area in our data
+  
+---
+
+
+
+
+

@@ -1,0 +1,562 @@
+State,Gender,Education,18-29,30-44,45-64,65+
+Alabama,, -> Total -> Total Alabama,789024,904709,1278571,828050
+Alabama,, -> Total -> Total Alabama -> Total Male,395164,439494,612488,359932
+Alabama,Male,H.S. or less,195648,198528,294365,168153
+Alabama,Male,Some college,148968,129718,171277,91367
+Alabama,Male,College graduate,41573,73950,89582,56376
+Alabama,Male,Postgraduate,8975,37298,57264,44036
+Alabama,, -> Total -> Total Alabama -> Total Female,393860,465215,666083,468118
+Alabama,Female,H.S. or less,150755,154651,265227,258441
+Alabama,Female,Some college,172144,157324,221782,119811
+Alabama,Female,College graduate,57332,94553,107390,49935
+Alabama,Female,Postgraduate,13629,58687,71684,39931
+Alaska,, -> Total -> Total Alaska,130879,153415,182116,86999
+Alaska,, -> Total -> Total Alaska -> Total Male,72700,79251,95193,42896
+Alaska,Male,H.S. or less,37158,30099,37071,12990
+Alaska,Male,Some college,27911,27899,32195,16125
+Alaska,Male,College graduate,6611,14267,15183,7363
+Alaska,Male,Postgraduate,1020,6986,10744,6418
+Alaska,, -> Total -> Total Alaska -> Total Female,58179,74164,86923,44103
+Alaska,Female,H.S. or less,24262,19757,27437,17259
+Alaska,Female,Some college,23220,28046,29228,14144
+Alaska,Female,College graduate,8805,16647,18935,7491
+Alaska,Female,Postgraduate,1892,9714,11323,5209
+Arizona,, -> Total -> Total Arizona,1200892,1356210,1715118,1262132
+Arizona,, -> Total -> Total Arizona -> Total Male,622501,691410,832789,581075
+Arizona,Male,H.S. or less,297458,265644,318573,187579
+Arizona,Male,Some college,233283,225737,271766,186260
+Arizona,Male,College graduate,75562,129494,149265,111140
+Arizona,Male,Postgraduate,16198,70535,93185,96096
+Arizona,, -> Total -> Total Arizona -> Total Female,578391,664800,882329,681057
+Arizona,Female,H.S. or less,226867,210327,304884,275397
+Arizona,Female,Some college,240717,225512,312836,229466
+Arizona,Female,College graduate,92899,143800,163410,100917
+Arizona,Female,Postgraduate,17908,85161,101199,75277
+Arkansas,, -> Total -> Total Arkansas,485053,561631,752650,509776
+Arkansas,, -> Total -> Total Arkansas -> Total Male,246823,279153,366658,226796
+Arkansas,Male,H.S. or less,126099,133736,196815,116058
+Arkansas,Male,Some college,89610,78537,95076,56706
+Arkansas,Male,College graduate,24468,44501,47206,32290
+Arkansas,Male,Postgraduate,6646,22379,27561,21742
+Arkansas,, -> Total -> Total Arkansas -> Total Female,238230,282478,385992,282980
+Arkansas,Female,H.S. or less,94429,100900,168127,159309
+Arkansas,Female,Some college,100214,95700,125703,74237
+Arkansas,Female,College graduate,34631,54474,59321,28229
+Arkansas,Female,Postgraduate,8956,31404,32841,21205
+California,, -> Total -> Total California,6807400,8159788,9780757,5645719
+California,, -> Total -> Total California -> Total Male,3508959,4147687,4816713,2511905
+California,Male,H.S. or less,1437878,1560472,1929022,879313
+California,Male,Some college,1383865,1117098,1321576,693858
+California,Male,College graduate,562814,927874,941712,498650
+California,Male,Postgraduate,124402,542243,624403,440084
+California,, -> Total -> Total California -> Total Female,3298441,4012101,4964044,3133814
+California,Female,H.S. or less,1053928,1255784,1848907,1361702
+California,Female,Some college,1411285,1107886,1483945,902578
+California,Female,College graduate,672108,1001485,1016239,528184
+California,Female,Postgraduate,161120,646946,614953,341350
+Colorado,, -> Total -> Total Colorado,974425,1225917,1417826,808462
+Colorado,, -> Total -> Total Colorado -> Total Male,508778,634813,704457,369275
+Colorado,Male,H.S. or less,208668,199520,220961,100206
+Colorado,Male,Some college,188574,178105,202532,100002
+Colorado,Male,College graduate,95915,170587,169737,85272
+Colorado,Male,Postgraduate,15621,86601,111227,83795
+Colorado,, -> Total -> Total Colorado -> Total Female,465647,591104,713369,439187
+Colorado,Female,H.S. or less,152368,138222,193597,158558
+Colorado,Female,Some college,174108,162397,219355,135598
+Colorado,Female,College graduate,113681,179354,182793,82261
+Colorado,Female,Postgraduate,25490,111131,117624,62770
+Connecticut,, -> Total -> Total Connecticut,567525,648689,1003953,615183
+Connecticut,, -> Total -> Total Connecticut -> Total Male,291945,320829,485226,268334
+Connecticut,Male,H.S. or less,121252,114740,189688,105384
+Connecticut,Male,Some college,101769,75150,112045,56763
+Connecticut,Male,College graduate,56212,79678,100366,47751
+Connecticut,Male,Postgraduate,12712,51261,83127,58436
+Connecticut,, -> Total -> Total Connecticut -> Total Female,275580,327860,518727,346849
+Connecticut,Female,H.S. or less,83034,82134,166774,164294
+Connecticut,Female,Some college,106780,82433,141943,81967
+Connecticut,Female,College graduate,65285,86478,119364,48739
+Connecticut,Female,Postgraduate,20481,76815,90646,51849
+Delaware,, -> Total -> Total Delaware,149303,174379,257624,181910
+Delaware,, -> Total -> Total Delaware -> Total Male,75155,86042,121959,81113
+Delaware,Male,H.S. or less,36673,37778,55187,32199
+Delaware,Male,Some college,25646,21906,30442,19313
+Delaware,Male,College graduate,10325,15936,21218,15228
+Delaware,Male,Postgraduate,2511,10422,15112,14373
+Delaware,, -> Total -> Total Delaware -> Total Female,74148,88337,135665,100797
+Delaware,Female,H.S. or less,28128,28862,50230,46507
+Delaware,Female,Some college,28758,24893,38480,27784
+Delaware,Female,College graduate,12802,19313,27419,14959
+Delaware,Female,Postgraduate,4460,15269,19536,11547
+District of Columbia,, -> Total -> Total District of Columbia,156966,187186,145895,86026
+District of Columbia,, -> Total -> Total District of Columbia -> Total Male,71598,91061,71562,35191
+District of Columbia,Male,H.S. or less,21204,18251,23074,10833
+District of Columbia,Male,Some college,18007,10962,13100,5703
+District of Columbia,Male,College graduate,22863,24820,13244,5175
+District of Columbia,Male,Postgraduate,9524,37028,22144,13480
+District of Columbia,, -> Total -> Total District of Columbia -> Total Female,85368,96125,74333,50835
+District of Columbia,Female,H.S. or less,18190,16392,22658,18766
+District of Columbia,Female,Some college,23488,11596,15632,11136
+District of Columbia,Female,College graduate,30433,23658,13776,9034
+District of Columbia,Female,Postgraduate,13257,44479,22267,11899
+Florida,, -> Total -> Total Florida,3157010,3924593,5573319,4347812
+Florida,, -> Total -> Total Florida -> Total Male,1612175,1962173,2686899,1959991
+Florida,Male,H.S. or less,760130,826529,1139036,765862
+Florida,Male,Some college,599131,561779,762612,515856
+Florida,Male,College graduate,209211,376712,495886,368634
+Florida,Male,Postgraduate,43703,197153,289365,309639
+Florida,, -> Total -> Total Florida -> Total Female,1544835,1962420,2886420,2387821
+Florida,Female,H.S. or less,564624,616946,1081676,1156392
+Florida,Female,Some college,640987,618774,935617,649274
+Florida,Female,College graduate,272008,464881,560295,342847
+Florida,Female,Postgraduate,67216,261819,308832,239308
+Georgia,, -> Total -> Total Georgia,1769137,2094811,2688832,1458810
+Georgia,, -> Total -> Total Georgia -> Total Male,894134,1017674,1291159,634474
+Georgia,Male,H.S. or less,435519,431283,554292,275356
+Georgia,Male,Some college,309973,271174,333962,156635
+Georgia,Male,College graduate,123862,201239,249214,112939
+Georgia,Male,Postgraduate,24780,113978,153691,89544
+Georgia,, -> Total -> Total Georgia -> Total Female,875003,1077137,1397673,824336
+Georgia,Female,H.S. or less,324452,328333,505598,427675
+Georgia,Female,Some college,354144,328994,422654,210117
+Georgia,Female,College graduate,156430,242766,280767,103040
+Georgia,Female,Postgraduate,39977,177044,188654,83504
+Hawaii,, -> Total -> Total Hawaii,224297,280083,352220,261195
+Hawaii,, -> Total -> Total Hawaii -> Total Male,120699,143258,174204,118322
+Hawaii,Male,H.S. or less,56811,49466,64464,43222
+Hawaii,Male,Some college,46126,48304,55532,32442
+Hawaii,Male,College graduate,15295,31035,35137,24453
+Hawaii,Male,Postgraduate,2467,14453,19071,18205
+Hawaii,, -> Total -> Total Hawaii -> Total Female,103598,136825,178016,142873
+Hawaii,Female,H.S. or less,36452,35841,57262,64297
+Hawaii,Female,Some college,44036,43036,58346,37927
+Hawaii,Female,College graduate,18729,37710,41684,24697
+Hawaii,Female,Postgraduate,4381,20238,20724,15952
+Idaho,, -> Total -> Total Idaho,280935,334373,417199,277645
+Idaho,, -> Total -> Total Idaho -> Total Male,144746,168507,207251,131359
+Idaho,Male,H.S. or less,70990,64137,79079,45820
+Idaho,Male,Some college,55210,54402,71979,42771
+Idaho,Male,College graduate,16342,32501,36006,24977
+Idaho,Male,Postgraduate,2204,17467,20187,17791
+Idaho,, -> Total -> Total Idaho -> Total Female,136189,165866,209948,146286
+Idaho,Female,H.S. or less,53172,47359,68623,60260
+Idaho,Female,Some college,59788,61790,83996,51828
+Idaho,Female,College graduate,20356,40813,38624,23235
+Idaho,Female,Postgraduate,2873,15904,18705,10963
+Illinois,, -> Total -> Total Illinois,2070876,2507849,3293218,1990130
+Illinois,, -> Total -> Total Illinois -> Total Male,1051805,1257639,1611991,868470
+Illinois,Male,H.S. or less,422378,435003,631041,370313
+Illinois,Male,Some college,387494,345547,454128,221083
+Illinois,Male,College graduate,197828,300338,315335,148476
+Illinois,Male,Postgraduate,44105,176751,211487,128598
+Illinois,, -> Total -> Total Illinois -> Total Female,1019071,1250210,1681227,1121660
+Illinois,Female,H.S. or less,320499,324713,570460,549401
+Illinois,Female,Some college,401004,355456,522772,299742
+Illinois,Female,College graduate,233714,328601,354104,155971
+Illinois,Female,Postgraduate,63854,241440,233891,116546
+Indiana,, -> Total -> Total Indiana,1113006,1248549,1714168,1051179
+Indiana,, -> Total -> Total Indiana -> Total Male,567544,622836,843017,463041
+Indiana,Male,H.S. or less,279526,265656,404525,232064
+Indiana,Male,Some college,197570,180195,226933,112117
+Indiana,Male,College graduate,75660,118750,135305,60891
+Indiana,Male,Postgraduate,14788,58235,76254,57969
+Indiana,, -> Total -> Total Indiana -> Total Female,545462,625713,871151,588138
+Indiana,Female,H.S. or less,213410,198589,363078,335840
+Indiana,Female,Some college,217081,207362,274041,143486
+Indiana,Female,College graduate,95288,145440,149246,50596
+Indiana,Female,Postgraduate,19683,74322,84786,58216
+Iowa,, -> Total -> Total Iowa,518302,576305,789349,537861
+Iowa,, -> Total -> Total Iowa -> Total Male,266671,292727,392543,240564
+Iowa,Male,H.S. or less,103547,102889,168203,117288
+Iowa,Male,Some college,115142,95673,124557,59134
+Iowa,Male,College graduate,41961,63363,65999,36449
+Iowa,Male,Postgraduate,6021,30802,33784,27693
+Iowa,, -> Total -> Total Iowa -> Total Female,251631,283578,396806,297297
+Iowa,Female,H.S. or less,73582,67773,135623,155880
+Iowa,Female,Some college,118921,100777,146458,80866
+Iowa,Female,College graduate,50239,76078,77586,39594
+Iowa,Female,Postgraduate,8889,38950,37139,20957
+Kansas,, -> Total -> Total Kansas,489491,544320,712632,460414
+Kansas,, -> Total -> Total Kansas -> Total Male,255334,276169,352307,206438
+Kansas,Male,H.S. or less,106923,92731,138218,79539
+Kansas,Male,Some college,103705,88050,104325,57401
+Kansas,Male,College graduate,36272,61720,68852,39333
+Kansas,Male,Postgraduate,8434,33668,40912,30165
+Kansas,, -> Total -> Total Kansas -> Total Female,234157,268151,360325,253976
+Kansas,Female,H.S. or less,76241,66999,114857,114621
+Kansas,Female,Some college,101233,87681,121111,74045
+Kansas,Female,College graduate,45885,70212,79670,37690
+Kansas,Female,Postgraduate,10798,43259,44687,27620
+Kentucky,, -> Total -> Total Kentucky,723829,831880,1168836,729858
+Kentucky,, -> Total -> Total Kentucky -> Total Male,370881,415048,570014,322951
+Kentucky,Male,H.S. or less,189409,180874,296244,170540
+Kentucky,Male,Some college,129153,129580,146569,74505
+Kentucky,Male,College graduate,43064,65824,80645,42495
+Kentucky,Male,Postgraduate,9255,38770,46556,35411
+Kentucky,, -> Total -> Total Kentucky -> Total Female,352948,416832,598822,406907
+Kentucky,Female,H.S. or less,133039,127068,260715,234351
+Kentucky,Female,Some college,150340,147451,189505,101890
+Kentucky,Female,College graduate,55063,80995,83569,33909
+Kentucky,Female,Postgraduate,14506,61318,65033,36757
+Louisiana,, -> Total -> Total Louisiana,766253,914610,1167011,719060
+Louisiana,, -> Total -> Total Louisiana -> Total Male,387476,453357,562451,315522
+Louisiana,Male,H.S. or less,208239,225197,302614,159860
+Louisiana,Male,Some college,129239,123730,142282,77226
+Louisiana,Male,College graduate,42378,69409,76858,43653
+Louisiana,Male,Postgraduate,7620,35021,40697,34783
+Louisiana,, -> Total -> Total Louisiana -> Total Female,378777,461253,604560,403538
+Louisiana,Female,H.S. or less,154653,166998,275447,226646
+Louisiana,Female,Some college,154233,144199,176647,91266
+Louisiana,Female,College graduate,55348,94730,98301,48397
+Louisiana,Female,Postgraduate,14543,55326,54165,37229
+Maine,, -> Total -> Total Maine,187852,234162,391842,276595
+Maine,, -> Total -> Total Maine -> Total Male,96316,114847,190222,125559
+Maine,Male,H.S. or less,44643,40905,88337,51136
+Maine,Male,Some college,34987,37907,53437,31566
+Maine,Male,College graduate,14406,25143,31063,22880
+Maine,Male,Postgraduate,2280,10892,17385,19977
+Maine,, -> Total -> Total Maine -> Total Female,91536,119315,201620,151036
+Maine,Female,H.S. or less,31370,29100,70532,70495
+Maine,Female,Some college,37204,37772,63048,38608
+Maine,Female,College graduate,18973,34077,42222,22549
+Maine,Female,Postgraduate,3989,18366,25818,19384
+Maryland,, -> Total -> Total Maryland,944301,1194291,1628342,931423
+Maryland,, -> Total -> Total Maryland -> Total Male,477973,583389,778496,403230
+Maryland,Male,H.S. or less,200117,201037,286412,150469
+Maryland,Male,Some college,169866,142163,186081,84448
+Maryland,Male,College graduate,87301,133601,156489,76461
+Maryland,Male,Postgraduate,20689,106588,149514,91852
+Maryland,, -> Total -> Total Maryland -> Total Female,466328,610902,849846,528193
+Maryland,Female,H.S. or less,147391,150803,262582,231923
+Maryland,Female,Some college,179698,153067,236326,132178
+Maryland,Female,College graduate,106648,153102,184896,83487
+Maryland,Female,Postgraduate,32591,153930,166042,80605
+Massachusetts,, -> Total -> Total Massachusetts,1196539,1324841,1853439,1136597
+Massachusetts,, -> Total -> Total Massachusetts -> Total Male,598292,654213,895917,492722
+Massachusetts,Male,H.S. or less,220629,206189,328409,186939
+Massachusetts,Male,Some college,197656,133928,199798,103844
+Massachusetts,Male,College graduate,144064,172976,203153,93376
+Massachusetts,Male,Postgraduate,35943,141120,164557,108563
+Massachusetts,, -> Total -> Total Massachusetts -> Total Female,598247,670628,957522,643875
+Massachusetts,Female,H.S. or less,162022,147907,284275,295374
+Massachusetts,Female,Some college,218048,149817,257655,146103
+Massachusetts,Female,College graduate,164185,188619,230148,100499
+Massachusetts,Female,Postgraduate,53992,184285,185444,101899
+Michigan,, -> Total -> Total Michigan,1636833,1774248,2690801,1711507
+Michigan,, -> Total -> Total Michigan -> Total Male,836814,885455,1318028,765463
+Michigan,Male,H.S. or less,362959,317897,536471,316306
+Michigan,Male,Some college,323995,290478,416953,221767
+Michigan,Male,College graduate,122867,173834,215721,116970
+Michigan,Male,Postgraduate,26993,103246,148883,110420
+Michigan,, -> Total -> Total Michigan -> Total Female,800019,888793,1372773,946044
+Michigan,Female,H.S. or less,271625,240666,477348,461924
+Michigan,Female,Some college,349590,310854,487513,274673
+Michigan,Female,College graduate,142837,201445,250870,114840
+Michigan,Female,Postgraduate,35967,135828,157042,94607
+Minnesota,, -> Total -> Total Minnesota,871699,1101836,1442830,884734
+Minnesota,, -> Total -> Total Minnesota -> Total Male,444540,560112,717964,402329
+Minnesota,Male,H.S. or less,171156,163139,241751,154569
+Minnesota,Male,Some college,172772,182817,234345,112536
+Minnesota,Male,College graduate,89000,142253,156598,76968
+Minnesota,Male,Postgraduate,11612,71903,85270,58256
+Minnesota,, -> Total -> Total Minnesota -> Total Female,427159,541724,724866,482405
+Minnesota,Female,H.S. or less,122072,109801,203555,217835
+Minnesota,Female,Some college,175883,175510,260198,139185
+Minnesota,Female,College graduate,106335,162006,169194,82430
+Minnesota,Female,Postgraduate,22869,94407,91919,42955
+Mississippi,, -> Total -> Total Mississippi,493874,554613,751639,474211
+Mississippi,, -> Total -> Total Mississippi -> Total Male,248924,268950,358513,206504
+Mississippi,Male,H.S. or less,118500,127304,183970,103630
+Mississippi,Male,Some college,105093,87910,105266,53683
+Mississippi,Male,College graduate,20464,34314,42756,28220
+Mississippi,Male,Postgraduate,4867,19422,26521,20971
+Mississippi,, -> Total -> Total Mississippi -> Total Female,244950,285663,393126,267707
+Mississippi,Female,H.S. or less,88512,93513,159923,148257
+Mississippi,Female,Some college,117138,109408,134474,70242
+Mississippi,Female,College graduate,29559,48107,60817,26496
+Mississippi,Female,Postgraduate,9741,34635,37912,22712
+Missouri,, -> Total -> Total Missouri,986456,1144168,1580954,1033851
+Missouri,, -> Total -> Total Missouri -> Total Male,501331,570428,770157,455911
+Missouri,Male,H.S. or less,227561,221556,345803,204553
+Missouri,Male,Some college,187892,172370,215664,121081
+Missouri,Male,College graduate,69449,113163,129181,70422
+Missouri,Male,Postgraduate,16429,63339,79509,59855
+Missouri,, -> Total -> Total Missouri -> Total Female,485125,573740,810797,577940
+Missouri,Female,H.S. or less,163329,155188,305448,305886
+Missouri,Female,Some college,206835,192667,259880,156472
+Missouri,Female,College graduate,92111,133859,150708,63868
+Missouri,Female,Postgraduate,22850,92026,94761,51714
+Montana,, -> Total -> Total Montana,167925,193877,272171,199184
+Montana,, -> Total -> Total Montana -> Total Male,87576,99016,134107,95275
+Montana,Male,H.S. or less,40708,34428,52492,35779
+Montana,Male,Some college,33354,31701,43716,27660
+Montana,Male,College graduate,12009,23099,25171,18501
+Montana,Male,Postgraduate,1505,9788,12728,13335
+Montana,, -> Total -> Total Montana -> Total Female,80349,94861,138064,103909
+Montana,Female,H.S. or less,28304,24158,43496,42099
+Montana,Female,Some college,33650,31761,50055,33057
+Montana,Female,College graduate,15503,25736,30549,18270
+Montana,Female,Postgraduate,2892,13206,13964,10483
+Nebraska,, -> Total -> Total Nebraska,318076,367555,461452,301725
+Nebraska,, -> Total -> Total Nebraska -> Total Male,163167,186425,230737,135652
+Nebraska,Male,H.S. or less,63125,58826,86968,56175
+Nebraska,Male,Some college,67776,62076,78412,38396
+Nebraska,Male,College graduate,27035,44418,42377,23897
+Nebraska,Male,Postgraduate,5231,21105,22980,17184
+Nebraska,, -> Total -> Total Nebraska -> Total Female,154909,181130,230715,166073
+Nebraska,Female,H.S. or less,47210,41594,74209,76613
+Nebraska,Female,Some college,67072,58853,82416,52503
+Nebraska,Female,College graduate,33643,50549,49655,23791
+Nebraska,Female,Postgraduate,6984,30134,24435,13166
+Nevada,, -> Total -> Total Nevada,474072,622263,768680,478017
+Nevada,, -> Total -> Total Nevada -> Total Male,242583,316485,384389,225770
+Nevada,Male,H.S. or less,128868,142038,167432,77918
+Nevada,Male,Some college,85563,98325,124799,76113
+Nevada,Male,College graduate,24324,51885,59685,40801
+Nevada,Male,Postgraduate,3828,24237,32473,30938
+Nevada,, -> Total -> Total Nevada -> Total Female,231489,305778,384291,252247
+Nevada,Female,H.S. or less,101308,114653,156845,112559
+Nevada,Female,Some college,92650,101058,130893,83982
+Nevada,Female,College graduate,32047,58430,63062,34101
+Nevada,Female,Postgraduate,5484,31637,33491,21605
+New Hampshire,, -> Total -> Total New Hampshire,211210,240164,400353,245871
+New Hampshire,, -> Total -> Total New Hampshire -> Total Male,109104,120816,197632,112354
+New Hampshire,Male,H.S. or less,46308,41937,75642,40904
+New Hampshire,Male,Some college,38120,33737,53290,28147
+New Hampshire,Male,College graduate,21244,28682,43105,22121
+New Hampshire,Male,Postgraduate,3432,16460,25595,21182
+New Hampshire,, -> Total -> Total New Hampshire -> Total Female,102106,119348,202721,133517
+New Hampshire,Female,H.S. or less,32402,26105,61967,56516
+New Hampshire,Female,Some college,41792,35646,63504,36578
+New Hampshire,Female,College graduate,21596,33067,47088,23647
+New Hampshire,Female,Postgraduate,6316,24530,30162,16776
+New Jersey,, -> Total -> Total New Jersey,1335541,1708817,2445467,1442926
+New Jersey,, -> Total -> Total New Jersey -> Total Male,682834,853471,1186178,622351
+New Jersey,Male,H.S. or less,263662,288662,454867,262920
+New Jersey,Male,Some college,241700,193654,265197,123119
+New Jersey,Male,College graduate,144928,224298,275095,122868
+New Jersey,Male,Postgraduate,32544,146857,191019,113444
+New Jersey,, -> Total -> Total New Jersey -> Total Female,652707,855346,1259289,820575
+New Jersey,Female,H.S. or less,195354,219992,438698,438081
+New Jersey,Female,Some college,235076,192165,312100,165117
+New Jersey,Female,College graduate,170320,259781,319425,127020
+New Jersey,Female,Postgraduate,51957,183408,189066,90357
+New Mexico,, -> Total -> Total New Mexico,342819,393078,513759,364354
+New Mexico,, -> Total -> Total New Mexico -> Total Male,178426,199040,248060,166621
+New Mexico,Male,H.S. or less,87212,86216,110467,65142
+New Mexico,Male,Some college,72010,63732,75333,42189
+New Mexico,Male,College graduate,14587,29423,35045,29063
+New Mexico,Male,Postgraduate,4617,19669,27215,30227
+New Mexico,, -> Total -> Total New Mexico -> Total Female,164393,194038,265699,197733
+New Mexico,Female,H.S. or less,64380,64413,98759,89689
+New Mexico,Female,Some college,73276,68770,88500,53789
+New Mexico,Female,College graduate,21847,36009,42409,27156
+New Mexico,Female,Postgraduate,4890,24846,36031,27099
+New York,, -> Total -> Total New York,3265124,3825857,5131982,3222016
+New York,, -> Total -> Total New York -> Total Male,1636091,1895735,2475907,1385250
+New York,Male,H.S. or less,617586,671292,1049831,622115
+New York,Male,Some college,583818,458631,613375,293618
+New York,Male,College graduate,348344,458965,458619,221593
+New York,Male,Postgraduate,86343,306847,354082,247924
+New York,, -> Total -> Total New York -> Total Female,1629033,1930122,2656075,1836766
+New York,Female,H.S. or less,479034,534857,991094,962843
+New York,Female,Some college,593061,450302,718030,392240
+New York,Female,College graduate,411830,496474,509193,228892
+New York,Female,Postgraduate,145108,448489,437758,252791
+North Carolina,, -> Total -> Total North Carolina,1708567,1973895,2716088,1687313
+North Carolina,, -> Total -> Total North Carolina -> Total Male,870221,964594,1305394,739105
+North Carolina,Male,H.S. or less,396746,362266,544099,314689
+North Carolina,Male,Some college,328062,288333,374409,193959
+North Carolina,Male,College graduate,121453,205352,247742,126020
+North Carolina,Male,Postgraduate,23960,108643,139144,104437
+North Carolina,, -> Total -> Total North Carolina -> Total Female,838346,1009301,1410694,948208
+North Carolina,Female,H.S. or less,275281,270973,458325,449758
+North Carolina,Female,Some college,364307,331131,490801,274081
+North Carolina,Female,College graduate,158328,248731,299178,134598
+North Carolina,Female,Postgraduate,40430,158466,162390,89771
+North Dakota,, -> Total -> Total North Dakota,144874,146202,174955,116340
+North Dakota,, -> Total -> Total North Dakota -> Total Male,77479,77199,89641,53107
+North Dakota,Male,H.S. or less,30815,23255,33771,23477
+North Dakota,Male,Some college,33597,30562,33748,16101
+North Dakota,Male,College graduate,11260,17759,15467,9278
+North Dakota,Male,Postgraduate,1807,5623,6655,4251
+North Dakota,, -> Total -> Total North Dakota -> Total Female,67395,69003,85314,63233
+North Dakota,Female,H.S. or less,19520,14380,24248,30068
+North Dakota,Female,Some college,29808,23593,34017,20642
+North Dakota,Female,College graduate,15750,21340,19546,8819
+North Dakota,Female,Postgraduate,2317,9690,7503,3704
+Ohio,, -> Total -> Total Ohio,1861184,2140351,3091814,1989157
+Ohio,, -> Total -> Total Ohio -> Total Male,946421,1066464,1509691,872580
+Ohio,Male,H.S. or less,446587,424350,694795,421721
+Ohio,Male,Some college,337381,305573,414809,216164
+Ohio,Male,College graduate,133292,217375,249811,126881
+Ohio,Male,Postgraduate,29161,119166,150276,107814
+Ohio,, -> Total -> Total Ohio -> Total Female,914763,1073887,1582123,1116577
+Ohio,Female,H.S. or less,343922,306417,630857,625445
+Ohio,Female,Some college,363045,357946,498667,270802
+Ohio,Female,College graduate,165633,241095,282024,127164
+Ohio,Female,Postgraduate,42163,168429,170575,93166
+Oklahoma,, -> Total -> Total Oklahoma,659417,761023,954841,618252
+Oklahoma,, -> Total -> Total Oklahoma -> Total Male,339405,384573,468491,275488
+Oklahoma,Male,H.S. or less,175225,178848,220999,112284
+Oklahoma,Male,Some college,120073,114743,135031,82140
+Oklahoma,Male,College graduate,36021,60590,73242,47012
+Oklahoma,Male,Postgraduate,8086,30392,39219,34052
+Oklahoma,, -> Total -> Total Oklahoma -> Total Female,320012,376450,486350,342764
+Oklahoma,Female,H.S. or less,128291,131954,196052,167123
+Oklahoma,Female,Some college,138282,124399,159482,101658
+Oklahoma,Female,College graduate,43464,80427,85668,43033
+Oklahoma,Female,Postgraduate,9975,39670,45148,30950
+Oregon,, -> Total -> Total Oregon,662067,856430,1056164,734755
+Oregon,, -> Total -> Total Oregon -> Total Male,338358,432229,518854,336704
+Oregon,Male,H.S. or less,151745,143003,180537,102287
+Oregon,Male,Some college,125885,136992,175714,112761
+Oregon,Male,College graduate,51275,95670,98794,66463
+Oregon,Male,Postgraduate,9453,56564,63809,55193
+Oregon,, -> Total -> Total Oregon -> Total Female,323709,424201,537310,398051
+Oregon,Female,H.S. or less,107851,106737,162049,145708
+Oregon,Female,Some college,136627,137034,197316,139626
+Oregon,Female,College graduate,64783,107393,109376,66813
+Oregon,Female,Postgraduate,14448,73037,68569,45904
+Pennsylvania,, -> Total -> Total Pennsylvania,2015698,2340887,3458033,2331978
+Pennsylvania,, -> Total -> Total Pennsylvania -> Total Male,1026669,1174698,1691857,1020103
+Pennsylvania,Male,H.S. or less,471256,455810,799848,509054
+Pennsylvania,Male,Some college,334830,299612,396290,208865
+Pennsylvania,Male,College graduate,180812,262517,301540,160621
+Pennsylvania,Male,Postgraduate,39771,156759,194179,141563
+Pennsylvania,, -> Total -> Total Pennsylvania -> Total Female,989029,1166189,1766176,1311875
+Pennsylvania,Female,H.S. or less,356887,331654,735754,781088
+Pennsylvania,Female,Some college,358912,316468,480553,259194
+Pennsylvania,Female,College graduate,210287,293793,329982,146971
+Pennsylvania,Female,Postgraduate,62943,224274,219887,124622
+Rhode Island,, -> Total -> Total Rhode Island,187003,195648,287330,182444
+Rhode Island,, -> Total -> Total Rhode Island -> Total Male,93970,98143,138321,79032
+Rhode Island,Male,H.S. or less,37908,38342,59039,35016
+Rhode Island,Male,Some college,35386,24949,34881,16001
+Rhode Island,Male,College graduate,16883,21726,26195,14512
+Rhode Island,Male,Postgraduate,3793,13126,18206,13503
+Rhode Island,, -> Total -> Total Rhode Island -> Total Female,93033,97505,149009,103412
+Rhode Island,Female,H.S. or less,27751,26754,54204,54848
+Rhode Island,Female,Some college,40494,27978,44784,21724
+Rhode Island,Female,College graduate,19490,25752,29474,13642
+Rhode Island,Female,Postgraduate,5298,17021,20547,13198
+South Carolina,, -> Total -> Total South Carolina,817202,940062,1325690,899935
+South Carolina,, -> Total -> Total South Carolina -> Total Male,413841,458956,630180,399986
+South Carolina,Male,H.S. or less,199143,195844,289513,163712
+South Carolina,Male,Some college,151221,135767,175989,108141
+South Carolina,Male,College graduate,53302,86264,106012,70805
+South Carolina,Male,Postgraduate,10175,41081,58666,57328
+South Carolina,, -> Total -> Total South Carolina -> Total Female,403361,481106,695510,499949
+South Carolina,Female,H.S. or less,143745,146389,266679,246614
+South Carolina,Female,Some college,176114,161334,228980,136850
+South Carolina,Female,College graduate,67754,104730,122253,65506
+South Carolina,Female,Postgraduate,15748,68653,77598,50979
+South Dakota,, -> Total -> Total South Dakota,141488,160908,214478,146600
+South Dakota,, -> Total -> Total South Dakota -> Total Male,73739,83841,107850,67815
+South Dakota,Male,H.S. or less,32893,29210,46896,31341
+South Dakota,Male,Some college,29267,29949,32875,17985
+South Dakota,Male,College graduate,10029,18324,19017,11381
+South Dakota,Male,Postgraduate,1550,6358,9062,7108
+South Dakota,, -> Total -> Total South Dakota -> Total Female,67749,77067,106628,78785
+South Dakota,Female,H.S. or less,22796,18995,36478,38503
+South Dakota,Female,Some college,28885,27160,37848,23891
+South Dakota,Female,College graduate,12761,21956,22337,10995
+South Dakota,Female,Postgraduate,3307,8956,9965,5396
+Tennessee,, -> Total -> Total Tennessee,1102204,1288176,1767910,1106342
+Tennessee,, -> Total -> Total Tennessee -> Total Male,554349,636266,854509,488105
+Tennessee,Male,H.S. or less,269090,282635,410335,233182
+Tennessee,Male,Some college,193052,171351,223985,121330
+Tennessee,Male,College graduate,77993,118364,140436,74692
+Tennessee,Male,Postgraduate,14214,63916,79753,58901
+Tennessee,, -> Total -> Total Tennessee -> Total Female,547855,651910,913401,618237
+Tennessee,Female,H.S. or less,201289,212055,379981,343114
+Tennessee,Female,Some college,218972,204443,279800,156877
+Tennessee,Female,College graduate,101304,144086,159313,67065
+Tennessee,Female,Postgraduate,26290,91326,94307,51181
+Texas,, -> Total -> Total Texas,4934396,5970225,6758416,3592776
+Texas,, -> Total -> Total Texas -> Total Male,2531858,3005679,3317107,1602362
+Texas,Male,H.S. or less,1205121,1262466,1443061,647086
+Texas,Male,Some college,925652,836639,893374,426519
+Texas,Male,College graduate,330037,590302,615135,304425
+Texas,Male,Postgraduate,71048,316272,365537,224332
+Texas,, -> Total -> Total Texas -> Total Female,2402538,2964546,3441309,1990414
+Texas,Female,H.S. or less,916188,994616,1390847,998975
+Texas,Female,Some college,978452,882123,1017019,543903
+Texas,Female,College graduate,408149,694397,678504,274370
+Texas,Female,Postgraduate,99749,393410,354939,173166
+Utah,, -> Total -> Total Utah,599657,653771,621243,349088
+Utah,, -> Total -> Total Utah -> Total Male,306891,333006,308709,162982
+Utah,Male,H.S. or less,125932,99891,95700,39613
+Utah,Male,Some college,136124,106539,103690,56507
+Utah,Male,College graduate,37373,79292,64425,35125
+Utah,Male,Postgraduate,7462,47284,44894,31737
+Utah,, -> Total -> Total Utah -> Total Female,292766,320765,312534,186106
+Utah,Female,H.S. or less,93854,85758,97022,69680
+Utah,Female,Some college,138434,116039,120544,67557
+Utah,Female,College graduate,52362,85689,64379,32458
+Utah,Female,Postgraduate,8116,33279,30589,16411
+Vermont,, -> Total -> Total Vermont,104359,107358,175859,121100
+Vermont,, -> Total -> Total Vermont -> Total Male,53463,53700,85849,55446
+Vermont,Male,H.S. or less,23445,18867,38020,21341
+Vermont,Male,Some college,18421,15232,20230,13491
+Vermont,Male,College graduate,10241,13315,15941,10377
+Vermont,Male,Postgraduate,1356,6286,11658,10237
+Vermont,, -> Total -> Total Vermont -> Total Female,50896,53658,90010,65654
+Vermont,Female,H.S. or less,15961,12613,28107,25232
+Vermont,Female,Some college,21137,14110,25317,16733
+Vermont,Female,College graduate,11312,16525,20455,12599
+Vermont,Female,Postgraduate,2486,10410,16131,11090
+Virginia,, -> Total -> Total Virginia,1404129,1696526,2225307,1315090
+Virginia,, -> Total -> Total Virginia -> Total Male,719759,847758,1080776,582382
+Virginia,Male,H.S. or less,296666,280838,400358,221771
+Virginia,Male,Some college,267968,224664,262135,134477
+Virginia,Male,College graduate,127303,197091,220595,107894
+Virginia,Male,Postgraduate,27822,145165,197688,118240
+Virginia,, -> Total -> Total Virginia -> Total Female,684370,848768,1144531,732708
+Virginia,Female,H.S. or less,212316,201280,358150,333548
+Virginia,Female,Some college,272758,233713,334470,191210
+Virginia,Female,College graduate,152073,224389,259641,118390
+Virginia,Female,Postgraduate,47223,189386,192270,89560
+Washington,, -> Total -> Total Washington,1237458,1571563,1890478,1159893
+Washington,, -> Total -> Total Washington -> Total Male,643922,803645,935968,529065
+Washington,Male,H.S. or less,278918,252923,306448,153486
+Washington,Male,Some college,229734,246445,305825,169075
+Washington,Male,College graduate,110572,191439,198398,112112
+Washington,Male,Postgraduate,24698,112838,125297,94392
+Washington,, -> Total -> Total Washington -> Total Female,593536,767918,954510,630828
+Washington,Female,H.S. or less,198643,188395,274217,230125
+Washington,Female,Some college,236817,241818,348528,216345
+Washington,Female,College graduate,124854,200540,205132,112442
+Washington,Female,Postgraduate,33222,137165,126633,71916
+West Virginia,, -> Total -> Total West Virginia,268562,321520,492209,360282
+West Virginia,, -> Total -> Total West Virginia -> Total Male,138921,162068,242454,163475
+West Virginia,Male,H.S. or less,74449,81229,142210,95251
+West Virginia,Male,Some college,47436,44316,55218,35369
+West Virginia,Male,College graduate,14266,24068,27903,16772
+West Virginia,Male,Postgraduate,2770,12455,17123,16083
+West Virginia,, -> Total -> Total West Virginia -> Total Female,129641,159452,249755,196807
+West Virginia,Female,H.S. or less,53442,58131,124567,122176
+West Virginia,Female,Some college,52649,53917,70654,42457
+West Virginia,Female,College graduate,17622,28237,31688,16248
+West Virginia,Female,Postgraduate,5928,19167,22846,15926
+Wisconsin,, -> Total -> Total Wisconsin,920617,1071592,1559341,981354
+Wisconsin,, -> Total -> Total Wisconsin -> Total Male,470900,542048,777632,447123
+Wisconsin,Male,H.S. or less,199657,193502,323341,202607
+Wisconsin,Male,Some college,182777,180985,243015,117145
+Wisconsin,Male,College graduate,76871,115849,135443,71017
+Wisconsin,Male,Postgraduate,11595,51712,75833,56354
+Wisconsin,, -> Total -> Total Wisconsin -> Total Female,449717,529544,781709,534231
+Wisconsin,Female,H.S. or less,148804,129379,268866,274269
+Wisconsin,Female,Some college,186339,178195,271841,142688
+Wisconsin,Female,College graduate,94742,145251,161803,74118
+Wisconsin,Female,Postgraduate,19832,76719,79199,43156
+Wyoming,, -> Total -> Total Wyoming,92235,112696,145728,95770
+Wyoming,, -> Total -> Total Wyoming -> Total Male,48566,58504,73827,46194
+Wyoming,Male,H.S. or less,22575,22029,29032,16676
+Wyoming,Male,Some college,20044,21526,25737,14561
+Wyoming,Male,College graduate,4622,9619,11674,8302
+Wyoming,Male,Postgraduate,1325,5330,7384,6655
+Wyoming,, -> Total -> Total Wyoming -> Total Female,43669,54192,71901,49576
+Wyoming,Female,H.S. or less,16714,13935,21914,20348
+Wyoming,Female,Some college,19607,20556,29267,17311
+Wyoming,Female,College graduate,5549,12574,13460,7586
+Wyoming,Female,Postgraduate,1799,7127,7260,4331
