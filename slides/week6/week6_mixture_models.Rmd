@@ -1,0 +1,506 @@
+---
+title: "Week 6: Mixture Models"
+subtitle: "PLSC 40502 - Statistical Models"
+# author: "Anton Strezhnev"
+output: 
+  xaringan::moon_reader:
+    self_contained: true
+    css: [default, uchicago_pol_meth.css]
+    nature:
+      highlightLines: true
+      ratio: '16:9'
+      
+---
+class: title-slide
+
+# Review
+$$
+  \require{cancel}
+  \DeclareMathOperator*{\argmin}{arg\,min}
+$$
+  
+```{r, echo = F, message=F, warnings=F}
+library(tidyverse)
+library(haven)
+library(estimatr)
+library(knitr)
+
+options(digits=3)
+
+```
+
+---
+
+# Previously
+
+$$
+  \DeclareMathOperator*{\argmax}{arg\,max}
+$$
+
+- **Survey weighting**
+  - Learning about **population** parameters from non-representative samples.
+  - Two key components: **selection/non-response model** and a **measurement model** for the population targets.
+  - **Calibration** weighting - find weights that satisfy a set of moment condition subject to a loss function.
+- **Multilevel Regression and Post-stratification**
+  - Can we estimate population proportions for small areas with a national survey?
+  - **Yes** - if we pool information from other units.
+
+---
+
+# This week
+
+- **"Exploratory" modeling**
+  - Unsupervised "clustering" algorithms
+  - K-means clustering
+  - Bayesian mixture models
+  - Obtaining MLEs or posterior modes via Expectation-Maximization
+- **Topic modeling**
+  - A mixture model for text:
+  - Documents have a topic **distribution**
+  - Define a DGP for each word as a function of the document topic distribution and a topic-specific word distribution.
+  - Flexible way of representing documents via a lower-dimensional summary.
+  
+---
+class: title-slide
+
+# Finite Mixture Models
+
+---
+
+# Finite Mixture Models
+
+- In conventional **regression** models, we assume a known distribution for the outcome given a set of covariates
+  - The covariates could be something like a discrete "group" label (e.g. $X_i = x$)
+--
+
+- In this setting, conditional on $X_i$, we would model each $Y_i$ with a known distribution (e.g. Normal)
+
+$$Y_i | X_i = x \sim \text{Normal}(\mu_{x}, \sigma^2_{x})$$
+
+$\mu_{x}$ and $\sigma^2_{x}$ are the mean and variance parameters associated with the group $X_i = x$.
+
+--
+
+- Now imagine that the group indicators are **not observed** but instead rather **latent parameters**
+  - We can do inference on these parameters conditional on the observed data and the model.
+
+---
+
+# Finite Mixture Models
+
+- In a **finite** mixture model, we assume that the outcome distribution for each observation $i$ is governed by some discrete latent indicator $z_i \in \{1, 2, \dotsc, K\}$
+  - $z_1, z_2, \dotsc, z_N$ are i.i.d. $\sim \text{Categorical}(\pi)$
+--
+
+- Conditional on the latent variable $z_i = k$, the outcome distribution is known. 
+- For example, in a **gaussian** finite mixture model, we assume
+
+$$Y_i | z_i = k \sim \text{Normal}(\mu_{k}, \sigma^2_{k})$$
+--
+
+- But unconditionally, $Y_i$ has a **mixture** distribution in that its density is a weighted average of the component densities. 
+- In a **gaussian** finite mixture model, we have:
+
+$$Y_i \sim \sum_{k=1}^K \pi_k \times \text{Normal}(\mu_{k}, \sigma^2_{k})$$
+where $\pi_k = Pr(z_i = k)$
+--
+
+- Our goal is to estimate the cluster means/variances for each cluster and the mixing proportions using likelihood inference.
+  - Put priors on the mean/variance parameters and $\pi$ to make it fully bayesian. 
+
+---
+
+# Penguins!
+
+```{r, echo=F}
+library(palmerpenguins)
+```
+
+- For our running example, we'll look at the `palmerpenguins` dataset which contains measurements on three species of penguins in the Palmer Archipelago in Antarctica
+
+```{r, warning=F, message=F, echo=F, fig.height=6, fig.width=8, fig.align="center"}
+penguins %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm, colour=species)) + geom_point(size=2.5) + xlab("Flipper Length (mm)") + ylab("Bill Length (mm)") + theme_bw() + theme(text = element_text(size = 20))
+```
+
+---
+
+# Clustering
+
+- Suppose we didn't observe the labels, could we still recover the latent "clusters" in the data?
+
+```{r, warning=F, message=F, echo=F, fig.height=6, fig.width=7, fig.align="center"}
+penguins_complete <- penguins %>% filter(!is.na(flipper_length_mm)&!is.na(bill_length_mm))
+penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm)) + geom_point(size=2.5) + xlab("Flipper Length (mm)") + ylab("Bill Length (mm)") + theme_bw() + theme(text = element_text(size = 20))
+```
+
+---
+
+# K-means 
+
+- A simple algorithm for generating clusters that has no underlying probabilistic model is the **K-means algorithm**
+  - Straightforward to implement and still surprisingly popular and effective for a "first cut" at the data.
+--
+
+- **K-means algorithm**
+  1. Initialize $K$ distinct clusters by randomly assigning points to one of the $k$ groups
+  2. Calculate $\mu_k$ as the mean of $Y_i$ in observations in cluster $k$.
+  3. Reassign each point to the cluster $k$ that has the smallest distance between $Y_i$ and $\mu_k$.
+  4. Repeat 2-3 until no points change their assignments.
+  
+---
+
+# K-means example
+
+- Let $K = 3$ and randomly pick three initial $\mu_k$
+
+
+```{r, warning=F, message=F, echo=F, fig.height=6, fig.width=8, fig.align="center"}
+set.seed(60639)
+K <- 3 # 3 Clusters
+k_clust <- MASS::mvrnorm(K, colMeans(penguins_complete %>% select(flipper_length_mm, bill_length_mm)), Sigma = var(penguins_complete %>% select(flipper_length_mm, bill_length_mm))) # Randomly pick three starting MUs
+k_clust_df <- as.data.frame(k_clust)
+k_clust_df$cluster <- c("1","2","3")
+
+penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm)) + geom_point(size=2.5, alpha=.6) + xlab("Flipper Length (mm)") + ylab("Bill Length (mm)") + geom_point(aes(colour=cluster), size=10, data=k_clust_df, shape=18) + theme_bw() +  theme(text = element_text(size = 20))
+```
+
+---
+
+# K-means example
+
+- Assign each penguin to the cluster with the nearest cluster centroid.
+
+```{r, warning=F, message=F, echo=F, fig.height=6, fig.width=8, fig.align="center"}
+penguins_complete$cluster <- as.character(apply(penguins_complete %>% select(flipper_length_mm, bill_length_mm), 1, 
+      function(x) which.min(sqrt(colSums((x - t(k_clust))^2)))))
+
+penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm, colour=cluster)) + geom_point(size=2.5) + xlab("Flipper Length (mm)") + ylab("Bill Length (mm)") + geom_point(aes(colour=cluster), size=10, data=k_clust_df, shape=18) + theme_bw() +  theme(text = element_text(size = 20))
+```
+
+---
+
+# K-means example
+
+- Recompute the cluster means
+
+```{r, warning=F, message=F, echo=F, fig.height=6, fig.width=8, fig.align="center"}
+
+k_clust <- as.matrix((penguins_complete %>% group_by(cluster) %>% summarize(flipper_length_mm = mean(flipper_length_mm), bill_length_mm = mean(bill_length_mm)))[,c(2,3)])
+k_clust_df <- as.data.frame(k_clust)
+k_clust_df$cluster <- c("1","2","3")
+
+penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm, colour=cluster)) + geom_point(size=2.5) + xlab("Flipper Length (mm)") + ylab("Bill Length (mm)") + geom_point(aes(colour=cluster), size=10, data=k_clust_df, shape=18) + theme_bw() +  theme(text = element_text(size = 20))
+```
+
+---
+
+# K-means example
+
+- Re-label the points
+
+```{r, warning=F, message=F, echo=F, fig.height=6, fig.width=8, fig.align="center"}
+penguins_complete$cluster <- as.character(apply(penguins_complete %>% select(flipper_length_mm, bill_length_mm), 1, 
+      function(x) which.min(sqrt(colSums((x - t(k_clust))^2)))))
+
+penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm, colour=cluster)) + geom_point(size=2.5) + xlab("Flipper Length (mm)") + ylab("Bill Length (mm)") + geom_point(aes(colour=cluster), size=10, data=k_clust_df, shape=18) + theme_bw() +  theme(text = element_text(size = 20))
+```
+
+---
+
+# K-means example
+
+- Iterate until convergence
+
+```{r, warning=F, message=F, echo=F, fig.height=6, fig.width=8, fig.align="center"}
+maxIter = 10000
+for (iter in 1:maxIter){
+  # Step 1 Compute cluster means
+    k_clust <- as.matrix((penguins_complete %>% group_by(cluster) %>% summarize(flipper_length_mm = mean(flipper_length_mm), bill_length_mm = mean(bill_length_mm)))[,c(2,3)])
+  k_clust_df <- as.data.frame(k_clust)
+  k_clust_df$cluster <- c("1","2","3")
+
+  # Step 2 
+  cluster_propose <- as.character(apply(penguins_complete %>% select(flipper_length_mm, bill_length_mm), 1, 
+      function(x) which.min(sqrt(colSums((x - t(k_clust))^2)))))
+  
+  if (sum(cluster_propose != penguins_complete$cluster) == 0){
+    break
+  }else{
+    penguins_complete$cluster = cluster_propose
+  }
+}
+
+penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm, colour=cluster)) + geom_point(size=2.5) + xlab("Flipper Length (mm)") + ylab("Bill Length (mm)") + geom_point(aes(colour=cluster), size=10, data=k_clust_df, shape=18) + theme_bw() +  theme(text = element_text(size = 20)) + ggtitle(str_c("K-means: ", iter, " iterations"))
+```
+
+---
+
+# K-means example
+
+- Note some sensitivity to the choice of distance metric. Here's what it looks like if we standardize each $Y$ by it standard deviation.
+
+```{r,warning=F, message=F, echo=F, fig.height=6, fig.width=8, fig.align="center"}
+maxIter = 10000
+
+set.seed(60639)
+k_clust <- MASS::mvrnorm(K, colMeans(penguins_complete %>% select(flipper_length_mm, bill_length_mm)), Sigma = var(penguins_complete %>% select(flipper_length_mm, bill_length_mm))) # Randomly pick three starting MUs
+sdev<- as.vector(as.matrix((penguins_complete %>% summarize(flipper_length_mm = sd(flipper_length_mm), bill_length_mm = sd(bill_length_mm))))) # standard deviations
+k_clust_df <- as.data.frame(k_clust)
+k_clust_df$cluster2 <- c("1","2","3")
+
+penguins_complete$cluster2 <- as.character(apply(penguins_complete %>% select(flipper_length_mm, bill_length_mm), 1, 
+      function(x) which.min(sqrt(colSums(((x - t(k_clust))/sdev)^2)))))
+
+for (iter in 1:maxIter){
+  # Step 1 Compute cluster means
+    k_clust <- as.matrix((penguins_complete %>% group_by(cluster2) %>% summarize(flipper_length_mm = mean(flipper_length_mm), bill_length_mm = mean(bill_length_mm)))[,c(2,3)])
+
+  k_clust_df <- as.data.frame(k_clust)
+  k_clust_df$cluster2 <- c("1","2","3")
+
+  # Step 2 - Assign to clusters
+  cluster_propose <- as.character(apply(penguins_complete %>% select(flipper_length_mm, bill_length_mm), 1, 
+      function(x) which.min(sqrt(colSums(((x - t(k_clust))/sdev)^2)))))
+  
+  if (sum(cluster_propose != penguins_complete$cluster2) == 0){
+    break
+  }else{
+    penguins_complete$cluster2 = cluster_propose
+  }
+}
+
+penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm, colour=cluster2)) + geom_point(size=2.5) + xlab("Flipper Length (mm)") + ylab("Bill Length (mm)") + geom_point(aes(colour=cluster2), size=10, data=k_clust_df, shape=18) + theme_bw() +  theme(text = element_text(size = 20)) + ggtitle(str_c("K-means: ", iter, " iterations"))
+
+```
+
+---
+
+# K-means example
+
+- How do our clusters compare to the **actual** categories? Surprisingly well!
+
+```{r}
+table(penguins_complete$cluster2, penguins_complete$species)
+```
+
+- But the clusters themselves don't have any underlying interpretation or meaning
+  - We **assign** the interpretation to them through inspection!
+
+---
+
+# K-means
+
+- Advantages
+  - Easy to implement, fast updating steps and quick convergence.
+--
+
+- Disadvantages
+  - Multimodality (we can't really solve this one!)
+  - Choice of distance metric matters.
+  - Hard to make sense of outcomes that aren't in $\mathbb{R}^{d}$ (e.g. binary/discrete outcomes)
+--
+
+- With conventional K-means, we have no underlying probability model -- each unit is assigned to a single cluster.
+  - Sometimes called **"hard"** K-means.
+--
+
+- We can instead implement an approach sometimes referred to as a "soft" K-means algorithm
+  - Our target of inference is the **probability** that a unit belongs to each cluster.
+
+---
+
+# Gaussian Mixture Models
+
+- Assume **latent variables** $z = \{z_1, z_2, \dotsc, z_N\}$
+
+$$z_i \underset{\text{i.i.d.}}{\sim} \text{Categorical}(\pi)$$
+--
+
+- Then, the outcome vector $Y_i$ has a multivariate gaussian distribution conditional on $Z_i = k$
+
+$$Y_i | z_i = k \sim \text{Normal}(\mu_{k}, \Sigma_{k})$$
+--
+
+- Our goal is to infer $\mu_k$ and $\Sigma_k$ for each cluster
+  - And conditional on these estimates, we can obtain the cluster probabilities $Pr(Z_i = k | Y_i)$
+
+---
+
+# Expectation-Maximization
+
+- Let's write down the marginal likelihood, marginalizing out the latent parameters:
+
+$$\mathcal{L}(\mu, \Sigma, \pi; \mathbf{Y}) = \prod_{i=1}^N \sum_{k=1}^K f(Y_i| \mu_{k}, \Sigma_{k}, Z_i = k) \times p(Z_i = k | \pi)$$
+--
+
+- This is a tricky likelihood to maximize - if we take the log, we get a log of a sum (which doesn't simplify as neatly as a log of a product)
+
+$$\ell(\mu, \Sigma, \pi ; \mathbf{Y}) = \sum_{i=1}^N \log\bigg(\sum_{k=1}^K \pi_k \times \mathcal{N}(Y_i| \mu_{k}, \Sigma_{k}) \bigg)$$
+--
+
+- Suppose we knew the $Z_i$ as well (they were like "data"), then the "complete" log-likelihood would be easier to maximize!
+
+$$\ell(\mu, \Sigma, \pi ; \mathbf{Y}, \mathbf{Z}) = \sum_{i=1}^N \sum_{k=1}^K \log\bigg( \pi_k^{I(Z_i = k)} \times \mathcal{N}(Y_i| \mu_{k}, \Sigma_{k})^{I(Z_i = k)} \bigg)$$
+
+---
+
+# Expectation-Maximization
+
+- The **Expectation-Maximization** algorithm is another iterative method for obtaining a maximum likelihood estimate (or maximum a posteriori (MAP) in a Bayesian setting) when the likelihood consists of a sum/integral over the distribution of some **latent variables**
+  - It uses the idea of iteratively optimizing a **lower bound** on the likelihood until convergence is reached.
+  - The key trick is **Jensen's inequality**. For a **concave** function like the logarithm:
+
+$$\log(E[X]) \ge E[\log(X)]$$
+--
+
+- Consider the general setting where we have a parameter $\theta$, data $\mathbf{X}$ and discrete latent variables $Z$
+- We want to optimize the log-likelihood:
+
+$$\ell(\theta; \mathbf{X}) = \log \sum_{\mathbf{Z}} f(\mathbf{X}, \mathbf{Z} |  \theta) = \log \sum_{\mathbf{Z}} f(\mathbf{X} | \mathbf{Z}, \theta) p(\mathbf{Z} | \theta)$$
+---
+
+# Expectation-Maximization
+
+- Instead of optimizing the log-likelihood, let's try to come up with a lower-bound. Define an arbitrary distribution on the latent variables $q(\mathbf{Z})$.
+- Multiply by 1:
+
+$$\ell(\theta; \mathbf{X}) = \log \sum_{\mathbf{Z}}  f(\mathbf{X} | \mathbf{Z}, \theta) p(\mathbf{Z} | \theta) \frac{q(\mathbf{Z})}{q(\mathbf{Z})}$$
+
+--
+
+- Rearranging terms, we can see that this can be written as an expectation over the distribution $q$
+
+$$\ell(\theta; \mathbf{X}) = \log E_{q} \bigg[\frac{ f(\mathbf{X} | \mathbf{Z}, \theta) p(\mathbf{Z} | \theta)}{q(\mathbf{Z})}\bigg]$$
+
+--
+
+- By **Jensen's inequality**, we have a lower bound
+
+$$\ell(\theta; \mathbf{X}) \ge E_{q} \bigg[ \log \bigg(\frac{ f(\mathbf{X} | \mathbf{Z}, \theta) p(\mathbf{Z} | \theta)}{q(\mathbf{Z})}\bigg)\bigg]$$
+
+---
+
+# Expectation-Maximization
+
+- And by properties of logs, our lower-bound is:
+
+$$\ell(\theta; \mathbf{X}) \ge E_{q}[\log(f(\mathbf{X}|\mathbf{Z}, \theta))] + E_{q}[\log(f\mathbf{Z}| \theta))] - E_{q}[\log(q(\mathbf{Z})]$$
+
+- We can optimize this **iteratively** by switching between finding an optimal distribution $q^{(t+1)}$ given parameter values $\theta^{(t)}$ and finding parameter values $\theta^{(t+1)}$ given an existing choice of $q^{(t)}$.
+
+--
+
+1. **Expectation** step: Find $q^{(t+1)}$ (what distribution are we taking the expectation over)
+2. **Maximization** step: Find $\theta^{(t+1)}$ (given our $q$ distribution, what is the value of the parameter values that maximizes the lower bound).
+
+---
+
+# E-step
+
+- Can we find a closed-form "optimal" solution for our update $q^{(t+1)}$ given $\theta^{(t)}$?
+  - Yes, find the $q$ that makes the inequality an equality!
+--
+
+
+$$\ell(\theta^{(t)}; \mathbf{X}) \ge E_{q} \bigg[ \log \bigg(\frac{ f(\mathbf{X} | \mathbf{Z}, \theta^{(t)}) p(\mathbf{Z} | \theta^{(t)})}{q(\mathbf{Z})}\bigg)\bigg]$$
+
+$$\ell(\theta^{(t)}; \mathbf{X}) \ge \sum_{\mathbf{Z}}\log \bigg(\frac{ f(\mathbf{X} | \mathbf{Z}, \theta^{(t)}) p(\mathbf{Z} | \theta^{(t)})}{q(\mathbf{Z})}\bigg) q(\mathbf{Z})$$
+
+---
+
+# E-step
+
+- Let's try to get the $\mathbf{Z}$ out of the log. Start by factoring the joint distribution in the numerator conditioning on $\mathbf{X}$ instead of $\mathbf{Z}$
+
+$$\ell(\theta^{(t)}; \mathbf{X}) \ge \sum_{\mathbf{Z}}\log \bigg(\frac{ f(\mathbf{Z} | \mathbf{X}, \theta^{(t)}) p(\mathbf{X} | \theta^{(t)})}{q(\mathbf{Z})}\bigg) q(\mathbf{Z})$$
+
+--
+
+- Now we can see the optimal choice for $q^{t+1}$ revealed to us. Suppose we plug in $q = f(\mathbf{Z} | \mathbf{X}, \theta^{(t)})$, the conditional distribution of $Z$ given $X$ and $\theta^{(t)}$:
+
+$$\ell(\theta^{(t)}; \mathbf{X}) \ge \sum_{\mathbf{Z}}\log( p(\mathbf{X} | \theta^{(t)}) \times f(\mathbf{Z} | \mathbf{X}, \theta^{(t)})$$
+
+--
+
+- The logged term no longer depends on $\mathbf{Z}$, so pull it out of the sum
+
+$$\ell(\theta^{(t)}; \mathbf{X}) \ge \log( p(\mathbf{X} | \theta^{(t)}) \times \sum_{\mathbf{Z}} f(\mathbf{Z} | \mathbf{X}, \theta^{(t)})$$
+---
+
+# E-step
+
+- The sum is equal to $1$ (sum over a PMF/PDF) and we're left with the definition of the marginal log-likelihood, so this expression holds with *equality*
+
+$$\ell(\theta^{(t)}; \mathbf{X}) = \log( p(\mathbf{X} | \theta^{(t)})$$
+
+--
+
+- So our choice of distribution over which to take the expectation of the joint likelihood is $q^{(t+1)} = f(\mathbf{Z} | \mathbf{X}, \theta^{(t)})$
+
+---
+
+# M-step
+
+- Let's go back to our lower bound - for a given value of $q^{(t)}$, we want to find the $\theta^{(t+1)}$ that maximize the "complete data" log-likelihood
+
+$$\ell(\theta; \mathbf{X}) \ge E_{q^{(t)}}[\log(f(\mathbf{X}|\mathbf{Z}, \theta))] + E_{q^{(t)}}[\log(f(\mathbf{Z}| \theta))] - E_{q^{(t)}}[\log(q^{(t)}(\mathbf{Z})]$$
+--
+
+- Since the third term doesn't depend on $\theta$, we only need to worry about the first two. 
+  - This is sometimes called the "Q-Function" $Q(\theta | \theta^{(t)})$ or the expected "complete data" log-likelihood
+  
+$$Q(\theta | \theta^{(t)}) = E_{\mathbf{Z}|\mathbf{X}, \theta^{(t)}}[\log(f(\mathbf{X}, \mathbf{Z}| \theta))]$$
+--
+
+- The M-step sets $\theta^{(t+1)}$ to the value of $\theta$ that maximizes this Q-function
+
+$$\theta^{(t+1)} = \argmax_{\theta} Q(\theta | \theta^{(t)})$$
+
+---
+
+# Deriving EM for the GMM
+
+- For current values of $\mu^{(t)}$, $\Sigma^{(t)}$, $\pi^{(t)}$, let's derive the $Q$ function. 
+- We'll start by deriving the conditional distribution $z_i | Y_i, \mu^{(t)}, \Sigma^{(t)}, \pi^{(t)}$ using Bayes' rule
+
+$$p(z_i = k | Y_i, \mu^{(t)}, \Sigma^{(t)}, \pi^{(t)}) = \frac{p(z_i = k | \pi_k^{(t)}) f(Y_i |  \mu^{(t)}, \Sigma^{(t)}, z_i = k)}{f(Y_i |  \mu^{(t)}, \Sigma^{(t)})}$$
+--
+
+- Given $z_i = k$, we know the distribution is normal at mean $\mu_{k}^{(t)}$ and variance $\Sigma_{k}^{(t)}$. And the denominator is just the marginal 
+
+$$\gamma_i^k = p(z_i = k | Y_i, \mu^{(t)}, \Sigma^{(t)}, \pi^{(t)}) = \frac{\pi_k^{(t)} \times \mathcal{N}(Y_i |  \mu_k^{(t)}, \Sigma_k^{(t)})}{\sum_{j=1}^K \pi_j^{(t)} \times \mathcal{N}(Y_i |  \mu^{(t)}_j, \Sigma^{(t)}_j)}$$
+
+- These weights, $\gamma_i^k$ are sometimes called the "responsibility" parameters as they denote the extent to which each cluster is "responsible" for an observation. 
+
+
+---
+
+# Deriving EM for the GMM
+
+- Recall the "complete likelihood"
+
+$$\ell(\mu, \Sigma, \pi ; \mathbf{Y}, \mathbf{Z}) = \sum_{i=1}^N \sum_{k=1}^K\log\bigg( \pi_k^{I(Z_i = k)} \times \mathcal{N}(Y_i| \mu_{k}, \Sigma_{k})^{I(Z_i = k)} \bigg)$$
+- Simplify it a bit
+
+$$\ell(\mu, \Sigma, \pi ; \mathbf{Y}, \mathbf{Z}) = \sum_{i=1}^N \sum_{k=1}^K I(Z_i = k)\log(\pi_k) + \sum_{i=1}^N \sum_{k=1}^KI(Z_i = k) \log \mathcal{N}(Y_i| \mu_{k}, \Sigma_{k})$$
+
+- Now, taking the expectation over $Z_i$, the only component that is not a constant is $I(Z_i = k)$ and $E[I(Z_i = k)] = p(Z_i = k)$ (fundamental bridge).
+  - And we got that (conditional) expectation in the previous section: $\gamma_i^k$
+--
+
+- So our Q function is
+
+$$Q(\theta | \theta^{(t)}) = \sum_{i=1}^N \sum_{k=1}^K \gamma_i^k\log(\pi_k) + \sum_{i=1}^N \sum_{k=1}^K \gamma_i^k \log \mathcal{N}(Y_i| \mu_{k}, \Sigma_{k})$$
+
+---
+
+# Deriving EM for the GMM
+
+- Closed form solutions are straightforward to obtain for the M-step (and follow from weighted regression)
+
+$$n_k = \sum_{i=1}^N \gamma_i^k$$
+$$\pi_k = \frac{n_k}{N}$$
+$$\mu_k = \frac{1}{n_k}\sum_{i=1}^N \gamma_i^k Y_i$$
+$$\Sigma_k = \frac{1}{n_k} \sum_{i=1}^N \gamma_i^k (Y_i - \mu_{k})(Y_i - \mu_{k})^{\prime}$$
+---
+
