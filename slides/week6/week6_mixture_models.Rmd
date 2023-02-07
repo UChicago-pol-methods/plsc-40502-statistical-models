@@ -161,7 +161,7 @@ k_clust <- MASS::mvrnorm(K, colMeans(penguins_complete %>% select(flipper_length
 k_clust_df <- as.data.frame(k_clust)
 k_clust_df$cluster <- c("1","2","3")
 
-penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm)) + geom_point(size=2.5, alpha=.6) + xlab("Flipper Length (mm)") + ylab("Bill Length (mm)") + geom_point(aes(colour=cluster), size=10, data=k_clust_df, shape=18) + theme_bw() +  theme(text = element_text(size = 20))
+penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm)) + geom_point(size=2.5, alpha=.6) + xlab("Flipper Length (mm)") + ylab("Bill Length (mm)") + geom_point(aes(colour=cluster), size=10, data=k_clust_df, shape=18) + theme_bw() +  theme(text = element_text(size = 20)) + theme(legend.position = "none")
 ```
 
 ---
@@ -174,7 +174,7 @@ penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm)) + geom_
 penguins_complete$cluster <- as.character(apply(penguins_complete %>% select(flipper_length_mm, bill_length_mm), 1, 
       function(x) which.min(sqrt(colSums((x - t(k_clust))^2)))))
 
-penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm, colour=cluster)) + geom_point(size=2.5) + xlab("Flipper Length (mm)") + ylab("Bill Length (mm)") + geom_point(aes(colour=cluster), size=10, data=k_clust_df, shape=18) + theme_bw() +  theme(text = element_text(size = 20))
+penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm, colour=cluster)) + geom_point(size=2.5) + xlab("Flipper Length (mm)") + ylab("Bill Length (mm)") + geom_point(aes(colour=cluster), size=10, data=k_clust_df, shape=18) + theme_bw() +  theme(text = element_text(size = 20)) + theme(legend.position = "none")
 ```
 
 ---
@@ -189,7 +189,7 @@ k_clust <- as.matrix((penguins_complete %>% group_by(cluster) %>% summarize(flip
 k_clust_df <- as.data.frame(k_clust)
 k_clust_df$cluster <- c("1","2","3")
 
-penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm, colour=cluster)) + geom_point(size=2.5) + xlab("Flipper Length (mm)") + ylab("Bill Length (mm)") + geom_point(aes(colour=cluster), size=10, data=k_clust_df, shape=18) + theme_bw() +  theme(text = element_text(size = 20))
+penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm, colour=cluster)) + geom_point(size=2.5) + xlab("Flipper Length (mm)") + ylab("Bill Length (mm)") + geom_point(aes(colour=cluster), size=10, data=k_clust_df, shape=18) + theme_bw() +  theme(text = element_text(size = 20)) + theme(legend.position = "none")
 ```
 
 ---
@@ -202,7 +202,7 @@ penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm, colour=c
 penguins_complete$cluster <- as.character(apply(penguins_complete %>% select(flipper_length_mm, bill_length_mm), 1, 
       function(x) which.min(sqrt(colSums((x - t(k_clust))^2)))))
 
-penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm, colour=cluster)) + geom_point(size=2.5) + xlab("Flipper Length (mm)") + ylab("Bill Length (mm)") + geom_point(aes(colour=cluster), size=10, data=k_clust_df, shape=18) + theme_bw() +  theme(text = element_text(size = 20))
+penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm, colour=cluster)) + geom_point(size=2.5) + xlab("Flipper Length (mm)") + ylab("Bill Length (mm)") + geom_point(aes(colour=cluster), size=10, data=k_clust_df, shape=18) + theme_bw() +  theme(text = element_text(size = 20)) + theme(legend.position = "none")
 ```
 
 ---
@@ -230,7 +230,7 @@ for (iter in 1:maxIter){
   }
 }
 
-penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm, colour=cluster)) + geom_point(size=2.5) + xlab("Flipper Length (mm)") + ylab("Bill Length (mm)") + geom_point(aes(colour=cluster), size=10, data=k_clust_df, shape=18) + theme_bw() +  theme(text = element_text(size = 20)) + ggtitle(str_c("K-means: ", iter, " iterations"))
+penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm, colour=cluster)) + geom_point(size=2.5) + xlab("Flipper Length (mm)") + ylab("Bill Length (mm)") + geom_point(aes(colour=cluster), size=10, data=k_clust_df, shape=18) + theme_bw() +  theme(text = element_text(size = 20)) + ggtitle(str_c("K-means: ", iter, " iterations")) + theme(legend.position = "none")
 ```
 
 ---
@@ -269,7 +269,7 @@ for (iter in 1:maxIter){
   }
 }
 
-penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm, colour=cluster2)) + geom_point(size=2.5) + xlab("Flipper Length (mm)") + ylab("Bill Length (mm)") + geom_point(aes(colour=cluster2), size=10, data=k_clust_df, shape=18) + theme_bw() +  theme(text = element_text(size = 20)) + ggtitle(str_c("K-means: ", iter, " iterations"))
+penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm, colour=cluster2)) + geom_point(size=2.5) + xlab("Flipper Length (mm)") + ylab("Bill Length (mm)") + geom_point(aes(colour=cluster2), size=10, data=k_clust_df, shape=18) + theme_bw() +  theme(text = element_text(size = 20)) + ggtitle(str_c("K-means: ", iter, " iterations")) + theme(legend.position = "none")
 
 ```
 
@@ -504,3 +504,185 @@ $$\mu_k = \frac{1}{n_k}\sum_{i=1}^N \gamma_i^k Y_i$$
 $$\Sigma_k = \frac{1}{n_k} \sum_{i=1}^N \gamma_i^k (Y_i - \mu_{k})(Y_i - \mu_{k})^{\prime}$$
 ---
 
+# Implementing EM
+
+```{r}
+gmm_loglik <- function(Y, K, mu, sigma, pi){
+  # Log-likelihood of each Y
+  lik_normal <- matrix(nrow=nrow(Y), ncol=K)
+  for(k in 1:K){
+    lik_normal[,k] <- mvtnorm::dmvnorm(Y, mu[k,], sigma[[k]])
+  }
+  # Log of the sums
+  log_likelihood <- sum(apply(lik_normal, 1, function(x) log(sum(x*pi))))
+  return(log_likelihood)
+}
+```
+
+---
+
+# Implementing EM
+
+```{r}
+gmm_estep_gamma <- function(Y, K, mu, sigma, pi){
+  # Calculate unnormalized gamma_k for each k
+  gamma <- matrix(nrow=nrow(Y), ncol=K)
+  for (k in 1:K){
+    gamma[,k] <- pi[k]*mvtnorm::dmvnorm(Y, mu[k,], sigma[[k]])
+  }
+  # Normalize the gammas (denominator)
+  gamma <- gamma/rowSums(gamma)
+  return(gamma)
+}
+```
+
+---
+
+# Implementing EM
+
+```{r}
+sigma_update <- function(Y, K, mu_k, gamma, n_k){ # Super inefficient but works
+  # For each k
+  sigma <- list()
+  for (k in 1:K){
+    sigma[[k]] <- matrix(data=0, nrow=ncol(Y), ncol=ncol(Y)) # blank matrix
+    for (n in 1:nrow(Y)){
+      sigma[[k]] <- sigma[[k]] + gamma[n,k]*outer(Y[n,] - mu_k[k,], Y[n,] - mu_k[k,])
+    }
+    sigma[[k]] <- sigma[[k]]/n_k[k]
+  }
+  return(sigma)
+}
+```
+
+---
+
+# Implementing EM
+
+```{r}
+gmm_em <- function(Y, K, maxit=5000, tol=1e-8, verbose=F){
+  D <- ncol(Y) # Number of dimensions
+  ## Initialize the parameters (pick some reasonable starting points)
+  mu_k <- MASS::mvrnorm(K, colMeans(Y), Sigma = var(Y)) # Matrix of means
+  sigma_k <- list() # list of covariances
+  for (k in 1:K){
+    sigma_k[[k]] <- var(Y)
+  }
+  pi <- rep(1/K, K)
+  curr_lik <- gmm_loglik(Y, K, mu_k, sigma_k, pi) #Evaluate current likelihood
+  if(verbose) print(str_c("Log-Likelihood: ", curr_lik))
+  for(iter in 2:maxit){
+    # E-step
+    gamma <- gmm_estep_gamma(Y, K, mu_k, sigma_k, pi)
+    # M-step
+    n_k <- colSums(gamma)
+    pi <- n_k/sum(n_k)
+    for(k in 1:K){
+        mu_k[k,] <- colSums(gamma[,k]*Y)/n_k[k]
+    }
+    sigma_k <- sigma_update(Y, K, mu_k, gamma, n_k)
+    # Check convergence
+    new_lik <- gmm_loglik(Y, K, mu_k, sigma_k, pi)
+    if (abs(new_lik - curr_lik) < tol){
+      gamma <- gmm_estep_gamma(Y, K, mu_k, sigma_k, pi)
+      if(verbose)print(str_c("Log-Likelihood: ", curr_lik))
+      if(verbose) print(str_c("Log-Likelihood: ", new_lik))
+      if(verbose)print("Complete!")
+      break
+    }else{
+      curr_lik <- new_lik
+    }
+    if (iter %% 10 == 0&verbose){
+      print(str_c("Log-Likelihood: ", new_lik))
+    }
+  }
+  if(iter == maxit){
+    print("Error: Maxit reached")
+  }
+  return(list(mu= mu_k, sigma = sigma_k, pi=pi, gamma=gamma, log_lik = new_lik))
+}
+
+```
+
+---
+
+# Implementing EM
+
+```{r}
+set.seed(60639)
+penguins_em_3 <- gmm_em(Y=as.matrix(penguins_complete %>% select(flipper_length_mm, bill_length_mm)), K=3, verbose=T)
+```
+
+---
+
+# Visualizing EM
+
+- Now our point labels have **probabilities** attached
+
+```{r,warning=F, message=F, echo=F, fig.height=6, fig.width=8, fig.align="center"}
+em_clust_df <- as.data.frame(penguins_em_3$mu)
+em_clust_df$emcluster <- c("1","2","3")
+
+penguins_complete$emcluster <- as.character(apply(penguins_em_3$gamma, 1, function(x) which.max(x)))
+penguins_complete$clusterWeight <- apply(penguins_em_3$gamma, 1, function(x) max(x))
+
+penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm, colour=emcluster,alpha = clusterWeight)) + geom_point(size=2.5) + xlab("Flipper Length (mm)") + ylab("Bill Length (mm)") + geom_point(aes(colour=emcluster, alpha=1), size=10, data=em_clust_df, shape=18) + theme_bw() +  theme(text = element_text(size = 20)) + ggtitle(str_c("Gaussian Mixture - EM")) + theme(legend.position = "none")
+```
+
+---
+
+
+# Visualizing EM
+
+- We can also visualize the component distributions
+
+```{r,warning=F, message=F, echo=F, fig.height=6, fig.width=8, fig.align="center", cache=T}
+set.seed(6063)
+clust_1_curve <- as.data.frame(mvtnorm::rmvnorm(n=300000, penguins_em_3$mu[1,], penguins_em_3$sigma[[1]]))
+clust_2_curve <- as.data.frame(mvtnorm::rmvnorm(n=300000, penguins_em_3$mu[2,], penguins_em_3$sigma[[2]]))
+clust_3_curve <- as.data.frame(mvtnorm::rmvnorm(n=300000, penguins_em_3$mu[3,], penguins_em_3$sigma[[3]]))
+
+penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm, colour=emcluster,alpha = clusterWeight)) + geom_point(size=2.5) + xlab("Flipper Length (mm)") + ylab("Bill Length (mm)") + geom_point(aes(colour=emcluster, alpha=1), size=10, data=em_clust_df, shape=18) + theme_bw() +  theme(text = element_text(size = 20)) + ggtitle(str_c("Gaussian Mixture - EM")) + theme(legend.position = "none") + geom_density_2d(aes(colour="1", alpha=1), data=clust_1_curve)  +geom_density_2d(aes(colour="2", alpha=1), data=clust_2_curve) + geom_density_2d(aes(colour="3", alpha=1), data=clust_3_curve)
+```
+
+---
+
+# Alternate K
+
+- What does the 6-component mixture look like?
+
+```{r, echo=F}
+set.seed(60)
+penguins_em_4 <- gmm_em(Y=as.matrix(penguins_complete %>% select(flipper_length_mm, bill_length_mm)), K=6)
+```
+
+```{r,warning=F, message=F, echo=F, fig.height=6, fig.width=8, fig.align="center"}
+em_clust_df_4 <- as.data.frame(penguins_em_4$mu)
+em_clust_df_4$emcluster2 <- as.character(1:6)
+
+penguins_complete$emcluster2 <- as.character(apply(penguins_em_4$gamma, 1, function(x) which.max(x)))
+penguins_complete$clusterWeight2 <- apply(penguins_em_4$gamma, 1, function(x) max(x))
+
+penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm, colour=emcluster2,alpha = clusterWeight2)) + geom_point(size=2.5) + xlab("Flipper Length (mm)") + ylab("Bill Length (mm)") + geom_point(aes(colour=emcluster2, alpha=1), size=10, data=em_clust_df_4, shape=18) + theme_bw() +  theme(text = element_text(size = 20)) + ggtitle(str_c("Gaussian Mixture - 6 Components")) + theme(legend.position = "none")
+```
+
+
+---
+
+# Challenges with mixture models
+
+- **Highly model dependent** - our identification of the cluster centroids + variances depends heavily on our selection of the appropriate distribution for $Y_i$
+  - Normal does okay for outcomes where it's plausible that CLT kicks in, but not true of all $Y_i$
+--
+
+- **Multi-modality** - Mixture model likelihoods often have multiple modes and EM is only guaranteed to converge to a **local** optimum
+  - Can get stuck in a "bad" EM run (**Solution**: Run multiple EM chains with different starting values and pick the one with the best log-likelihood)
+  - "Label-switching" problem: Permuting the labels doesn't change the likelihood
+--
+
+- **Challenges with Bayes** - Sampling-based inference can be tricky with GMMs due to the label-switching problem.
+  - Can implement many models via MCMC/Gibbs but need tricks to avoid having the chain jump between permutations.
+  - Common to use an approximation to the likelihood around the posterior mode obtained via EM.
+  - Stan doesn't like sampling discrete latent variables.
+
+---
