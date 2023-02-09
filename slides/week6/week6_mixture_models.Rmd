@@ -601,7 +601,6 @@ gmm_em <- function(Y, K, maxit=5000, tol=1e-8, verbose=F){
   }
   return(list(mu= mu_k, sigma = sigma_k, pi=pi, gamma=gamma, log_lik = new_lik))
 }
-
 ```
 
 ---
@@ -653,17 +652,17 @@ penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm, colour=e
 
 ```{r, echo=F}
 set.seed(60)
-penguins_em_4 <- gmm_em(Y=as.matrix(penguins_complete %>% select(flipper_length_mm, bill_length_mm)), K=6)
+penguins_em_6 <- gmm_em(Y=as.matrix(penguins_complete %>% select(flipper_length_mm, bill_length_mm)), K=6)
 ```
 
 ```{r,warning=F, message=F, echo=F, fig.height=6, fig.width=8, fig.align="center"}
-em_clust_df_4 <- as.data.frame(penguins_em_4$mu)
-em_clust_df_4$emcluster2 <- as.character(1:6)
+em_clust_df_6 <- as.data.frame(penguins_em_6$mu)
+em_clust_df_6$emcluster2 <- as.character(1:6)
 
-penguins_complete$emcluster2 <- as.character(apply(penguins_em_4$gamma, 1, function(x) which.max(x)))
-penguins_complete$clusterWeight2 <- apply(penguins_em_4$gamma, 1, function(x) max(x))
+penguins_complete$emcluster2 <- as.character(apply(penguins_em_6$gamma, 1, function(x) which.max(x)))
+penguins_complete$clusterWeight2 <- apply(penguins_em_6$gamma, 1, function(x) max(x))
 
-penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm, colour=emcluster2,alpha = clusterWeight2)) + geom_point(size=2.5) + xlab("Flipper Length (mm)") + ylab("Bill Length (mm)") + geom_point(aes(colour=emcluster2, alpha=1), size=10, data=em_clust_df_4, shape=18) + theme_bw() +  theme(text = element_text(size = 20)) + ggtitle(str_c("Gaussian Mixture - 6 Components")) + theme(legend.position = "none")
+penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm, colour=emcluster2,alpha = clusterWeight2)) + geom_point(size=2.5) + xlab("Flipper Length (mm)") + ylab("Bill Length (mm)") + geom_point(aes(colour=emcluster2, alpha=1), size=10, data=em_clust_df_6, shape=18) + theme_bw() +  theme(text = element_text(size = 20)) + ggtitle(str_c("Gaussian Mixture - 6 Components")) + theme(legend.position = "none")
 ```
 
 
@@ -686,3 +685,525 @@ penguins_complete %>% ggplot(aes(x=flipper_length_mm, y=bill_length_mm, colour=e
   - Stan doesn't like sampling discrete latent variables.
 
 ---
+
+# Choosing K
+
+- Choosing $K$ is a problem of model comparison and selection.
+  - Just as in regression, more parameters = better **in-sample** fit.
+  - But we want to avoid **over-fitting**
+--
+- Just as before, two approaches
+  - **Information criteria** - Evaluate the in-sample log-likelihood at the maximum, penalized by some factor for the number of parameters
+  - **Cross-validation** - Estimate the model on a **training set**. Compute the log-likelihood on a **held-out** test set.
+  
+---
+
+# Choosing K
+
+- Log-likelihood doesn't decrease as K increases, but common to look for an "elbow" where the increases become marginal
+
+```{r, echo=F}
+gmm_em_manyruns <- function(Y, K, maxit=5000, runs=20, tol=1e-6, verbose=F){
+  results <- list()
+  likelihoods <- rep(NA, runs)
+  for (run in 1:runs){
+    D <- ncol(Y) # Number of dimensions
+    ## Initialize the parameters (pick some reasonable starting points)
+    mu_k <- MASS::mvrnorm(K, colMeans(Y), Sigma = var(Y)) # Matrix of means
+    sigma_k <- list() # list of covariances
+    for (k in 1:K){
+      sigma_k[[k]] <- var(Y)
+    }
+    pi <- rep(1/K, K)
+    curr_lik <- gmm_loglik(Y, K, mu_k, sigma_k, pi) #Evaluate current likelihood
+    if(verbose) print(str_c("Log-Likelihood: ", curr_lik))
+    for(iter in 2:maxit){
+      # E-step
+      gamma <- gmm_estep_gamma(Y, K, mu_k, sigma_k, pi)
+      # M-step
+      n_k <- colSums(gamma)
+      pi <- n_k/sum(n_k)
+      for(k in 1:K){
+          mu_k[k,] <- colSums(gamma[,k]*Y)/n_k[k]
+      }
+      sigma_k <- sigma_update(Y, K, mu_k, gamma, n_k)
+      # Check convergence
+      new_lik <- gmm_loglik(Y, K, mu_k, sigma_k, pi)
+      if (is.na(new_lik)){
+        new_lik <- -Inf
+        break
+      }
+      if (abs(new_lik - curr_lik) < tol){
+        gamma <- gmm_estep_gamma(Y, K, mu_k, sigma_k, pi)
+        if(verbose)print(str_c("Log-Likelihood: ", curr_lik))
+        if(verbose) print(str_c("Log-Likelihood: ", new_lik))
+        if(verbose)print("Complete!")
+        break
+      }else{
+        curr_lik <- new_lik
+      }
+      if (iter %% 10 == 0&verbose){
+        print(str_c("Log-Likelihood: ", new_lik))
+      }
+    }
+    if(iter == maxit){
+      print("Error: Maxit reached")
+    }
+    results[[run]] <- list(mu= mu_k, sigma = sigma_k, pi=pi, gamma=gamma, log_lik = new_lik)
+    likelihoods[run] <- new_lik
+  }
+  return(results[[which.max(likelihoods)]])
+}
+```
+
+```{r, echo=F, cache=T, warning=F, results=F, message=F}
+set.seed(60639)
+K_choice <- 2:10
+k_likelihoods <- rep(NA, 9)
+for (k in K_choice){
+  #print(k)
+  k_likelihoods[k-1] <- gmm_em_manyruns(Y=as.matrix(penguins_complete %>% select(flipper_length_mm, bill_length_mm)), K=k, runs=10)$log_lik
+}
+```
+
+```{r,warning=F, message=F, echo=F, fig.height=6, fig.width=8, fig.align="center"}
+plot(x=2:10, y=k_likelihoods, type="l", xlab="Number of Clusters", ylab="Log-likelihood")
+```
+
+---
+
+# Choosing K
+
+- Information criteria results depend on how much you penalize the additional parameters
+  - $\text{AIC} = 2k - 2\ell(\hat{\theta})$ shows minimal improvement beyond $6$ clusters (but still potentially some!)
+
+```{r,warning=F, message=F, echo=F, fig.height=6, fig.width=8, fig.align="center"}
+plot(x=K_choice, y=2*7*(K_choice) - 2*k_likelihoods, type="l", xlab="Number of Clusters", ylab="AIC")
+```
+
+---
+
+# Choosing K
+
+- 10-fold cross-validation gives best performance at $K=3$
+
+```{r, results=F, warning=F, message=F, echo=F, cache=T}
+# k-fold cross-validation
+# randomly assign data to CV-folds
+set.seed(605)
+nFolds <- 10
+penguins_complete$cv_fold <- sample.int(nFolds, size=nrow(penguins_complete), replace=T)
+K_choice_cv <- 2:6
+ho_likelihoods <- rep(NA, length(K_choice_cv))
+for (k in K_choice_cv){
+  heldout_lls <- rep(NA, nFolds)
+  for (fold in 1:nFolds){
+    fold_model <- gmm_em_manyruns(Y=as.matrix(penguins_complete %>% filter(cv_fold != fold) %>% select(flipper_length_mm, bill_length_mm)), K=k, runs=5)
+    heldout_lls[fold] <- gmm_loglik(Y=as.matrix(penguins_complete %>% filter(cv_fold == fold) %>% select(flipper_length_mm, bill_length_mm)), K=k, fold_model$mu, fold_model$sigma, fold_model$pi)/sum(penguins_complete$cv_fold == fold)
+  }
+  ho_likelihoods[k-1] = mean(heldout_lls)
+}
+```
+
+```{r,warning=F, message=F, echo=F, fig.height=6, fig.width=8, fig.align="center"}
+plot(x=K_choice_cv, y=ho_likelihoods, type="l", xlab="Number of Clusters", ylab="Average Held-Out Log-likelihood")
+```
+
+---
+
+
+class: title-slide
+
+# Topic Modeling
+
+---
+
+# Modeling Text
+
+- **Topic models** are a tool for **unsupervised** analysis of text
+  - Don't need to label the texts ex-ante.
+--
+
+- Texts are **high-dimensional** - Topic models provide a **lower-dimensional** summary of the common themes in a document
+  - Model document content as a **mixture** of a finite number of $K$ latent **topics**
+  - Topics are described as a **distribution** on words.
+--
+
+- History of topic models
+  - **Latent Dirichlet Allocation** $\leadsto$ **Correlated Topic Model** $\leadsto$ **Structural Topic Model**
+
+---
+
+# Example: Political Blogs
+
+- Our running example is the CMU 2008 Political Blog corpus (Eisenstein and Xing, 2010)
+  - 13,246 posts from 8 political blogs rated liberal/conservative
+  
+```{r, warning=F, message=F}
+library(stm)
+poliblog <- read_csv("data/poliblogs2008.csv")
+poliblog$documents[2:10] # Example document
+```
+
+---
+
+# Pre-processing the text
+
+- We will need to convert the raw documents into a **document-term matrix**
+  - **Rows**: Documents
+  - **Columns**: "Tokens" (words)
+--
+
+- The `stm` package in R, which implements the **Structural Topic Model** has a host of helper functions for parsing texts and applying conventional pre-processing techniques (stemming, stop word removal, etc...)
+  - `textProcessor` wraps the popular `tm` package for text mining
+
+```{r, cache=T, message=F, warning=F, results=F}
+processed <- textProcessor(poliblog$documents, metadata=poliblog,
+                           lowercase=T, removestopwords=T,
+                           removenumbers = T, removepunctuation=T,
+                           stem = T)
+```
+
+```{r, cache=T}
+out <- prepDocuments(processed$documents, processed$vocab, processed$meta,
+                     lower.thresh=round(.01*nrow(poliblog)), upper.thresh = round(.99*nrow(poliblog)))
+```
+
+---
+
+# "Bag of Words"
+
+- We summarize each document using the counts of each token
+  - These constitute our **document-term matrix** (which software packages typically store in a "sparse" format)
+
+```{r}
+head(data.frame(token=out$vocab[out$documents$`2`[1,]], count=out$documents$`2`[2,]))
+```
+--
+
+- The ordering of words is ignored - the "**bag of words**" assumption
+  - Can preserve some ordering by tokenizing bigrams or trigrams rather than just unigrams (e.g. "republican party" or "daily tracking poll")
+  - Interestingly, throwing out word order still typically preserves the underlying **topics** or **concepts** in a document!
+
+---
+
+# Latent Dirichlet Allocation
+
+- **Latent Dirichlet Allocation** (Blei, Ng, Jordan, 2003)
+  - A generative model for **words** $w$ - defined as unit-vectors from a discrete vocabulary $\{1, 2, \dotsc, V\}$
+  - **Documents** are collections of words $\mathbf{w} = \{w_1, w_2, \dotsc w_N\}$
+  - A **corpus** is a collection of documents $\{\mathbf{w}_1, \mathbf{w}_2, \dotsc \mathbf{w}_D\}$
+--
+
+- *LDA* assumes a particular generative process for each document $\mathbf{w}_d$:
+  1. Choose a **topic proportion** vector $\theta_d \sim \text{Dirichlet}(\alpha)$
+  2. For each of the $N$ words in document $d$ $w_{d,n}$
+      - Choose topic $z_{d,n} \sim \text{Multinomial}(\theta_d)$
+      - Choose word $w_{d,n} \sim \text{Mutinomial}(\beta_{z_{d,n}})$
+--
+
+- Two main targets of inference:
+  - The **document topic proportions**: $\theta = \{\theta_1, \theta_2, \dotsc \theta_D\}$
+  - The **topic-word distributions**: $\beta = \{\beta_1, \beta_2, \dotsc \beta_k\}$
+  
+---
+
+# Latent Dirichlet Allocation
+
+```{tikz, lda, echo=F, fig.align='center'}
+\usetikzlibrary{arrows}
+\usetikzlibrary{bayesnet}
+\begin{tikzpicture}
+\node[obs] (w) {$w_{d,n}$};
+\node[latent, left=of w] (z) {$z_{d,n}$};
+\node[latent, right=of w] (beta) {$\beta_k$};
+\node[latent, left=of z] (theta) {$\theta_d$};
+\node[const, left=of theta] (alpha) {$\alpha$};
+\edge{z}{w};
+\edge{beta}{w};
+\edge{theta}{z};
+\edge{alpha}{theta};
+\plate [inner sep=.1cm] {plate1} {(w) (z)} {$N$};
+\plate [inner sep=.1cm] {plate2} {(plate1) (theta)} {$D$};
+\plate [inner sep=.1cm] {plate3} {(beta)} {$K$};
+\end{tikzpicture}
+```
+
+---
+
+# Correlated Topic Model
+
+- LDA makes a somewhat restrictive assumption on the distribution from where the topics are drawn (the Dirichlet)
+  - Topic proportions are assumed to be **independent** (a feature of the dirichlet)
+  - But in reality, some topics are more likely to appear with others!
+--
+
+- The **Correlated Topic Model** (Blei and Raftery, 2006) addresses this
+  - Replaces the dirichlet with a logistic normal distribution.
+--
+
+- The **Correlated Topic Model** assumes that each document $\mathbf{w}_d$ is generated by:
+  1. Draw $\eta_d$ from a **normal distribution** with mean $\mu$, $\Sigma$ 
+  2. For each of the $N$ words $w_{d,n}$
+      - Choose topic $z_{d,n} \sim \text{Multinomial}(f(\eta_d))$ where $f(\eta_{d,k}) = \exp(\eta_{d,k})/\sum_{j} \exp(\eta_{d,j})$
+      - Choose word $w_{d,n} \sim \text{Mutinomial}(\beta_{z_{d,n}})$
+    
+---
+
+# Correlated Topic Model
+
+```{tikz, ctm, echo=F, fig.align='center'}
+\usetikzlibrary{arrows}
+\usetikzlibrary{bayesnet}
+\begin{tikzpicture}
+\node[obs] (w) {$w_{d,n}$};
+\node[latent, left=of w] (z) {$z_{d,n}$};
+\node[latent, right=of w] (beta) {$\beta_k$};
+\node[latent, left=of z] (eta) {$\eta_d$};
+\node[latent, left=of eta] (mu) {$\mu$};
+\node[latent, above=of eta] (sigma) {$\Sigma$};
+\edge{z}{w};
+\edge{beta}{w};
+\edge{eta}{z};
+\edge{mu}{eta};
+\edge{sigma}{eta};
+\plate [inner sep=.1cm] {plate1} {(w) (z)} {$N$};
+\plate [inner sep=.1cm] {plate2} {(plate1) (eta)} {$D$};
+\plate [inner sep=.1cm] {plate3} {(beta)} {$K$};
+\end{tikzpicture}
+```
+
+---
+
+# Structural Topic Model
+
+- Often researchers want to incorporate **covariates** in modeling the topic proportions
+  - e.g. - Do Liberal blogs talk about different topics compared to Conservative blogs?
+  - Ad-hoc regressions of topic proportions on covariates will fail to incorporate uncertainty in the estimation of the topics.
+--
+
+- Additionally, researchers may want to have different word distributions for a topic depending on covariates
+  - e.g. - Do Liberal blogs talk *about immigration* differently than Conservative blogs?
+--
+
+- The **Structural Topic Model** (Roberts, Stewart, Tingley, Airoldi, 2013) extends the correlated topic model to incorporate covariates:
+  - Allow covariates $X_d$ to enter into the logistic-normal distribution governing the topic proportions $\eta_d \sim \text{Normal}(\mu_{d}, \Sigma)$  where $\mu_{d,k} = X_{d}^{\prime}\gamma_{k}$
+  - Allow covariates $Y_d$ to enter into the $\beta$ parameter governing topic content $\beta_{d, k} \propto \exp(m + \kappa_k^{(t)} + \kappa_{y_d}^{(c)} + \kappa_{y_d,k}^{(i)})$
+
+---
+
+# Structural Topic Model
+
+```{tikz, stm, echo=F, fig.align='center'}
+\usetikzlibrary{arrows}
+\usetikzlibrary{bayesnet}
+\begin{tikzpicture}
+\node[obs] (w) {$w_{d,n}$};
+\node[latent, left=of w] (z) {$z_{d,n}$};
+\node[latent, right=of w] (beta) {$\beta_{d,k}$};
+\node[latent, left=of z] (eta) {$\eta_d$};
+\node[latent, above=of eta] (sigma) {$\Sigma$};
+\node[latent, left=of eta] (mu) {$\mu_d$};
+\node[obs, below=of mu] (x) {$X_d$};
+\node[obs, below=of beta] (y) {$Y_d$};
+\node[latent, above=of mu] (gamma) {$\gamma$};
+\node[latent, above=of beta] (kappa) {$\kappa$};
+\edge{z}{w};
+\edge{beta}{w};
+\edge{eta}{z};
+\edge{mu}{eta};
+\edge{sigma}{eta};
+\edge{x}{mu};
+\edge{y}{beta};
+\edge{gamma}{mu};
+\edge{kappa}{beta};
+\plate [inner sep=.1cm] {plate1} {(w) (z)} {$N$};
+\plate [inner sep=.1cm] {plate3} {(beta)} {$K$};
+\plate [inner sep=.1cm] {plate2} {(plate1) (plate3) (eta) (mu) (x) (y)} {$D$};
+\end{tikzpicture}
+```
+ 
+
+---
+
+# Illustration: Political Texts
+
+- Without any covariates, `stm()` is a fast implementation of the **correlated topic model**
+
+```{r, warning=F, message=F, results=F, cache=T}
+poliBlog_fit <- stm(documents = out$documents, 
+                    vocab = out$vocab,
+                    K = 20, verbose=F,
+                    max.em.its = 75, data = out$meta,
+                    init.type = "Spectral", seed=60639)
+```
+
+--
+
+- `stm()` implements a **Variational EM** algorithm to provide a tractable, analytical approximation to the posterior distribution
+  - **Benefits**: Faster, deterministic
+  - **Drawbacks**: Can understate the variance in the posterior 
+  - For more, see: Grimmer, 2010 "An Introduction to Bayesian Inference via Variational Approximations" *Political Analysis*
+  
+---
+
+# Illustration: Political Texts
+
+- Typically, we're interested in understanding the content of the topics discovered
+  - We'll inspect the **topic-word** distributions to attempt to infer the underlying topic meaning from a set of "top" words
+  
+```{r}
+labelTopics(poliBlog_fit, topics=20)
+```
+--
+
+- Common criteria for ranking the "top" words
+  - **Highest probability** - Which words have the highest probability in the topic-word distribution $\beta_{k} = p(w | z = k)$
+  - **Frequency-Exclusivity** (FREX) - Harmonic mean of rank by within-topic probability and rank by topic distribution given word $p(z | w = v)$
+  - **Lift** - Topic-word distribution divided by the empirical distribution - how **more common** are these words in this topic relative to their baseline prevalence)
+  - **Score** - Similar to Lift (but in terms of log probabilities)
+
+---
+
+# Illustration: Political Texts
+
+- We can find "prototypical" documents that contain a high proportion of a particular topic
+
+```{r,fig.height=6, fig.width=10, fig.align="center", warning=F, message=F}
+plotQuote(unlist(findThoughts(poliBlog_fit, texts = out$meta$documents, n=3, topics=20)$docs), maxwidth=300, width=100)
+```
+
+---
+
+# Illustration: Political Texts
+
+- What about this topic?
+
+```{r}
+labelTopics(poliBlog_fit, topics=16)
+```
+
+---
+
+# Illustration: Political Texts
+
+- Not all topics make sense
+
+```{r}
+labelTopics(poliBlog_fit, topics=4)
+```
+
+---
+
+# Illustration: Political Texts
+
+- Topic 4 seems to be picking up some odd stylistic feature of Minnesota conservative talk radio?
+
+```{r,fig.height=6, fig.width=10, fig.align="center", warning=F, message=F}
+plotQuote(unlist(findThoughts(poliBlog_fit, texts = out$meta$documents, n=3, topics=4)$docs), maxwidth=300, width=100)
+```
+
+---
+
+# Choosing Models
+
+- How do we evaluate the quality of a model?
+  - ...for multiple runs of the same topic count (multiple modes)
+  - ...for different numbers of topics?
+--
+
+- Conventional method: **held-out log-likelihood**. For an "out-of-sample" document $\mathbf{w}_{\text{out}}$:
+
+$$\text{Perplexity} = \exp(-\log p(\mathbf{w}_{\text{out}}| \mu, \Sigma, \beta))$$
+--
+
+- But "highly predictive" topic models may be difficult for humans to interpret (Chang et. al., 2009).
+
+---
+
+# Coherence and Exclusivity
+
+- **Alternative** - Pick models where the topics have nice features
+  - **Semantic coherence** - The most common words in a topic tend to co-occur in a document
+  - **Exclusivity** - Words that have high probability in a topic have low probability in **other** topics (FREX).
+--
+
+- **Semantic coherence** 
+  - Let $D(v, v^{\prime})$ define the number of times words $v$ and $v^{\prime}$ appear together in a document.
+  - Semantic coherence is defined as a sum across the $W$ most probable words
+
+$$C_k = \sum_{i=2}^W \sum_{j=1}^{i-1} \log \bigg( \frac{D(v_i, v_j) + 1}{D(v_j)}\bigg)$$
+
+---
+
+# Illustration: Political Texts
+
+- Let's compare fits across 10, 20, 30, and 40 topics
+
+```{r, cache=T}
+modelEval <- searchK(out$documents, 
+                    vocab = out$vocab,
+                    K = c(10,20,30,40), verbose=F,
+                    max.em.its = 75, data = out$meta,
+                    init.type = "Spectral", seed=60639, cores=4)
+```
+
+---
+
+# Illustration: Political Texts
+
+- Average topic exclusivity
+
+```{r,warning=F, message=F, echo=F, fig.height=7, fig.width=9, fig.align="center"}
+plot(modelEval)
+```
+
+---
+
+# Illustration: Political Texts
+
+
+```{r,warning=F, message=F, echo=F, fig.height=7, fig.width=9, fig.align="center"}
+plot(x=unlist(modelEval$results[,"K"]), y=unlist(modelEval$results[,"exclus"]), type="l", ylab="Average Exclusivity", xlab="Number of Topics", main="Exclusivity")
+```
+
+---
+
+# Estimating coefficients
+
+- With `stm()`, we can incorporate covariates into the topic proportions using standard formula syntax
+
+```{r, warning=F, message=F, results=F, cache=T}
+poliBlog_fit_cov <- stm(documents = out$documents, 
+                    vocab = out$vocab,
+                    prevalence = ~ rating,
+                    K = 20, verbose=F,
+                    max.em.its = 75, data = out$meta,
+                    init.type = "Spectral", seed=60639)
+```
+
+---
+
+# Estimating coefficients
+
+- Do liberal blogs talk about health care more than conservative blogs?
+
+```{r}
+estim_hc <- estimateEffect(c(16) ~ rating, stmobj=poliBlog_fit_cov, metadata=out$meta)
+summary(estim_hc)
+```
+
+
+---
+
+# Estimating coefficients
+
+- Do conservative blogs talk about the financial crisis more than liberal blogs?
+
+```{r}
+estim_fc <- estimateEffect(c(20) ~ rating, stmobj=poliBlog_fit_cov, metadata=out$meta)
+summary(estim_fc)
+```
+
+---
+
