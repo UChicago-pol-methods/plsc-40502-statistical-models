@@ -532,6 +532,7 @@ where `\(\epsilon_{ij}\)` are distributed i.i.d. standard logistic
   2. **Non-identifiability** - The 2PL likelihood is invariant to any rescaling of the latent parameters
       - Can multiply all `\(\theta\)` by a constant and not change the likelihood
       - Multiplying by `\(-1\)` changes the interpretation of `\(\theta\)` but not the likelihood.
+
 --
 
 - Putting a prior on `\(\theta\)` allows for identification
@@ -539,8 +540,8 @@ where `\(\epsilon_{ij}\)` are distributed i.i.d. standard logistic
 --
 
 - Also need an additional constraint:
-  - Either `\(\beta\)` is non-negative...
-  - ...or one of the `\(\theta\)` parameters is fixed to a **known** value
+  - Either constraints on `\(\beta\)`...
+  - ...or setting some of the `\(\theta\)` parameters to a **known** value
 
 ---
 
@@ -586,8 +587,6 @@ where `\(\epsilon_{ij}\)` are distributed i.i.d. standard logistic
 # Interpretation as a voting model
 
 - Returning to the &quot;latent variable&quot; formulation of the logit, we can write: `\(Y_{ij}^* = U_i(\zeta_j) - U_i(\psi_j)\)`
--- 
-
 - Then, some algebra
 `$$\begin{align*}
 Y_{ij}^* &amp;= -\frac{1}{\sigma_j}(\theta_i - \zeta_j)^2 + \eta_{ij} + \frac{1}{\sigma_j}(\theta_i - \psi_j)^2 - \nu_{ij}\\
@@ -807,8 +806,8 @@ transformed parameters{
 ```stan
 model{
   theta ~ normal(0, 1);
-  beta ~ normal(0, 9);
-  delta_start ~ normal(0, 6.6666667);
+  beta ~ normal(0, 3);
+  delta_start ~ normal(0, 2.58);
   delta1 ~ exponential(2);
   delta2 ~ exponential(2);
   delta3 ~ exponential(2);
@@ -852,29 +851,6 @@ polity_irt_bad &lt;-  stan(
   )
 ```
 
-```
-## Running /usr/lib/R/bin/R CMD SHLIB foo.c
-## gcc -I&quot;/usr/share/R/include&quot; -DNDEBUG   -I&quot;/home/anton/R/x86_64-pc-linux-gnu-library/4.2/Rcpp/include/&quot;  -I&quot;/home/anton/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/&quot;  -I&quot;/home/anton/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/unsupported&quot;  -I&quot;/home/anton/R/x86_64-pc-linux-gnu-library/4.2/BH/include&quot; -I&quot;/home/anton/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/src/&quot;  -I&quot;/home/anton/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/&quot;  -I&quot;/home/anton/R/x86_64-pc-linux-gnu-library/4.2/RcppParallel/include/&quot;  -I&quot;/home/anton/R/x86_64-pc-linux-gnu-library/4.2/rstan/include&quot; -DEIGEN_NO_DEBUG  -DBOOST_DISABLE_ASSERTS  -DBOOST_PENDING_INTEGER_LOG2_HPP  -DSTAN_THREADS  -DUSE_STANC3 -DSTRICT_R_HEADERS  -DBOOST_PHOENIX_NO_VARIADIC_EXPRESSION  -DBOOST_NO_AUTO_PTR  -include &#39;/home/anton/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/fun/Eigen.hpp&#39;  -D_REENTRANT -DRCPP_PARALLEL_USE_TBB=1      -fpic  -g -O2 -ffile-prefix-map=/build/r-base-Faorqz/r-base-4.2.2.20221110=. -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2  -c foo.c -o foo.o
-## In file included from /home/anton/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Core:88,
-##                  from /home/anton/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Dense:1,
-##                  from /home/anton/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/fun/Eigen.hpp:22,
-##                  from &lt;command-line&gt;:
-## /home/anton/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/src/Core/util/Macros.h:628:1: error: unknown type name ‘namespace’
-##   628 | namespace Eigen {
-##       | ^~~~~~~~~
-## /home/anton/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/src/Core/util/Macros.h:628:17: error: expected ‘=’, ‘,’, ‘;’, ‘asm’ or ‘__attribute__’ before ‘{’ token
-##   628 | namespace Eigen {
-##       |                 ^
-## In file included from /home/anton/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Dense:1,
-##                  from /home/anton/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/fun/Eigen.hpp:22,
-##                  from &lt;command-line&gt;:
-## /home/anton/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Core:96:10: fatal error: complex: No such file or directory
-##    96 | #include &lt;complex&gt;
-##       |          ^~~~~~~~~
-## compilation terminated.
-## make: *** [/usr/lib/R/etc/Makeconf:169: foo.o] Error 1
-```
-
 ---
 
 # Example: Improving Polity
@@ -892,7 +868,7 @@ traceplot(polity_irt_bad, pars=c(&quot;beta&quot;))
 
 # Example: Improving Polity
 
-Because the IRT model is identified only up to scaling, the MCMC ends up going to one of two posterior modes
+- Because the IRT model is identified only up to reflection, the MCMC ends up going to one of two posterior modes
   - `\(\beta\)` is positive and high `\(\theta\)` reflects high democracy
   - or `\(\beta\)` is negative and high `\(\theta\)` reflects high **autocracy**
 

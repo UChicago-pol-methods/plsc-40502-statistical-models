@@ -191,6 +191,7 @@ $$Pr(Y_{ij} = 1) = F\bigg(\beta_j\theta_i - \tau_j\bigg)$$
   2. **Non-identifiability** - The 2PL likelihood is invariant to any rescaling of the latent parameters
       - Can multiply all $\theta$ by a constant and not change the likelihood
       - Multiplying by $-1$ changes the interpretation of $\theta$ but not the likelihood.
+
 --
 
 - Putting a prior on $\theta$ allows for identification
@@ -198,8 +199,8 @@ $$Pr(Y_{ij} = 1) = F\bigg(\beta_j\theta_i - \tau_j\bigg)$$
 --
 
 - Also need an additional constraint:
-  - Either $\beta$ is non-negative...
-  - ...or one of the $\theta$ parameters is fixed to a **known** value
+  - Either constraints on $\beta$...
+  - ...or setting some of the $\theta$ parameters to a **known** value
 
 ---
 
@@ -245,8 +246,6 @@ $$Y_{ij}^* = \beta_j\theta_i - \tau_j + \epsilon_{ij}$$
 # Interpretation as a voting model
 
 - Returning to the "latent variable" formulation of the logit, we can write: $Y_{ij}^* = U_i(\zeta_j) - U_i(\psi_j)$
--- 
-
 - Then, some algebra
 $$\begin{align*}
 Y_{ij}^* &= -\frac{1}{\sigma_j}(\theta_i - \zeta_j)^2 + \eta_{ij} + \frac{1}{\sigma_j}(\theta_i - \psi_j)^2 - \nu_{ij}\\
@@ -431,8 +430,8 @@ transformed parameters{
 ```{stan output.var='model.block', eval=F, tidy=F}
 model{
   theta ~ normal(0, 1);
-  beta ~ normal(0, 9);
-  delta_start ~ normal(0, 6.6666667);
+  beta ~ normal(0, 3);
+  delta_start ~ normal(0, 2.58);
   delta1 ~ exponential(2);
   delta2 ~ exponential(2);
   delta3 ~ exponential(2);
@@ -500,7 +499,7 @@ polity_data <- list(N = nrow(polity2000), K= apply(polity2000 %>% select(exrec, 
 - Estimate the model (run 4 chains)
   - **Warning**: This model actually has convergence problems across the different chains
 
-```{r, warning=F, message=F, response=F, cache=T, error=T}
+```{r, warning=F, message=F, results=F, cache=T, error=T}
 # This model has convergence problems
 polity_irt_bad <-  stan(
   model_code = polityirt_model,  # Stan code
@@ -528,7 +527,7 @@ traceplot(polity_irt_bad, pars=c("beta"))
 
 # Example: Improving Polity
 
-Because the IRT model is identified only up to scaling, the MCMC ends up going to one of two posterior modes
+- Because the IRT model is identified only up to reflection, the MCMC ends up going to one of two posterior modes
   - $\beta$ is positive and high $\theta$ reflects high democracy
   - or $\beta$ is negative and high $\theta$ reflects high **autocracy**
 
