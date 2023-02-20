@@ -1,0 +1,71 @@
+---
+title: "Week 8: Flexible Regression"
+subtitle: "PLSC 40502 - Statistical Models"
+# author: "Anton Strezhnev"
+output: 
+  xaringan::moon_reader:
+    self_contained: true
+    css: [default, uchicago_pol_meth.css]
+    nature:
+      highlightLines: true
+      ratio: '16:9'
+      
+---
+class: title-slide
+
+# Review
+$$
+  \require{cancel}
+  \DeclareMathOperator*{\argmin}{arg\,min}
+$$
+  
+```{r, echo = F, message=F, warnings=F}
+library(tidyverse)
+library(haven)
+library(estimatr)
+library(knitr)
+
+options(digits=3)
+
+```
+
+---
+
+# Previously
+
+$$
+  \DeclareMathOperator*{\argmax}{arg\,max}
+$$
+
+- **Item response theory**
+  - **Factor model** for categorical/nominal outcome variables
+  - Model a matrix of **individual** responses across multiple common **questions**
+  - Responses are a function of a common **indivdual** latent parameter
+  - Identification via Bayes (prior on the individual latent parameters defines the scale/location).
+---
+
+# This week
+
+- **Flexible functional forms**
+  - Semi-/Non-parametric approaches to modeling CEFs of $Y_i$ given a continuous $X_i$
+  - Regression and smoothing splines to allow for flexible relationships between 
+  - Penalty term to avoid "jumpy" regressions
+  - Generalized Additive Models (GAMs) that combine "parametric" and "semi-/non-parametric" components
+- **Regularization**
+  - Why regularize?
+  - $L_0$, $L_1$, and $L_2$ norms
+  - Value of the lasso ($L_1$ norm) -- "sparse" regressions
+  - Interpreting regularization in Bayesian terms.
+  
+---
+class: title-slide
+
+# Flexible regression
+
+---
+
+# Flexible regression
+
+---
+
+
