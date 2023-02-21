@@ -24,6 +24,7 @@ library(tidyverse)
 library(haven)
 library(estimatr)
 library(knitr)
+library(splines)
 
 options(digits=3)
 
@@ -54,7 +55,7 @@ $$
 - **Regularization**
   - Why regularize?
   - $L_0$, $L_1$, and $L_2$ norms
-  - Value of the lasso ($L_1$ norm) -- "sparse" regressions
+  - Value of the lasso (the $L_1$ norm) - "sparse" regressions
   - Interpreting regularization in Bayesian terms.
   
 ---
@@ -66,6 +67,205 @@ class: title-slide
 
 # Flexible regression
 
+- A common task in statistics is estimating the conditional expectation function $E[Y|X]$.
+  - But typical methods for estimating the CEF assume that we know its functional form.
+  - For example, we assume linearity -- can be trivially satisfied when $X$ is discrete, but potentially problematic when $X$ is continuous.
+--
+
+$$E[Y|X] = f(X) =  X\beta$$
+--
+
+- We want to maintain the utility of a model that is **linear in the parameters** but introduce transformations of $X$ to capture potentially non-linear relationships between $Y$ and $X$.
+--
+
+- Define the **linear basis expansion** for a set of $M$ basis functions $h_m(X)$
+
+$$f(X) = \sum_{m=1}^M \beta_m h_m(X)$$
+  
 ---
 
+# Example: Modeling Bike Rentals
 
+- **Bikeshare usage** is highly variable from day-to-day and hour-to-hour. Capital Bikeshare in Washington D.C. recorded the hourly count of active users over a two-year period from 2011 to 2012.
+  - For more on the dataset, see: Fanaee-T, Hadi, and Gama, Joao, "Event labeling combining ensemble detectors and background knowledge", *Progress in Artificial Intelligence* (2013): pp. 1-15
+--
+
+```{r, warning=F, message=F}
+bike <- read_csv("data/bikes_hour.csv")
+bike_by_hour <- bike %>% group_by(hr) %>% summarize(cnt = mean(cnt))
+```
+
+---
+
+# Example: Modeling Bike Rentals
+
+- From the scatterplot of active usage vs. hour of the day, a simple linear fit (slope + intercept) seems quite poor at capturing the CEF
+--
+
+```{r, message = F, warning=F, fig.width=9, fig.height=6, fig.align="center", echo=F}
+bike %>% ggplot(aes(x=hr, y=cnt)) + geom_point(alpha=.1) + geom_point(data=bike_by_hour, col="red", shape=15, size=5) + geom_smooth(method="lm", linewidth=2) + xlab("Hour of the day") + ylab("Count of Users") +
+  theme_bw() + theme(text = element_text(size = 16))     
+```
+
+---
+
+# Polynomial basis
+
+- A common set of basis functions to choose are the **global polynomial** basis
+  - You've probably already done this when you've included squared terms in your regressions!
+--
+
+- For example, for a univariate $X$, the basis for a global cubic polynomial is:
+
+$$\begin{align*}h_1(X) &= 1\\
+h_2(X) &= X\\
+h_3(X) &= X^2\\
+h_4(X) &= X^3\end{align*}$$
+
+--
+
+- A $K$th order polynomial requires $K+1$ parameters
+--
+
+- However, there are some drawbacks to using a global polynomial - namely that each observation influences the **entire** curve.
+
+---
+
+# Polynomial basis
+
+```{r, message = F, warning=F, fig.width=9, fig.height=6, fig.align="center", echo=F}
+bike %>% ggplot(aes(x=hr, y=cnt)) + geom_point(alpha=.1) + geom_point(data=bike_by_hour, col="red", shape=15, size=5)  +   geom_smooth(method="lm", formula = y ~ x + I(x^2) + I(x^3), linewidth=2) + 
+  xlab("Hour of the day") + ylab("Count of Users") +
+  theme_bw() + theme(text = element_text(size = 16)) + ggtitle("Cubic polynomial")
+```
+
+---
+
+# Polynomial basis
+
+```{r, message = F, warning=F, fig.width=9, fig.height=6, fig.align="center", echo=F}
+bike %>% ggplot(aes(x=hr, y=cnt)) + geom_point(alpha=.1) + geom_point(data=bike_by_hour, col="red", shape=15, size=5)  +   geom_smooth(method="lm", formula = y ~ x + I(x^2) + I(x^3) + I(x^4) + I(x^5) + I(x^6) + I(x^7) + I(x^8) + I(x^9) + I(x^10) + I(x^11) + I(x^12) + I(x^13) + I(x^14) + I(x^15) + I(x^16) + I(x^17) + I(x^18) + I(x^19) + I(x^20), linewidth=2) + 
+  xlab("Hour of the day") + ylab("Count of Users") +
+  theme_bw() + theme(text = element_text(size = 16)) + ggtitle("20th order polynomial")
+```
+
+---
+
+# Step functions
+
+- Instead of forcing a single **global** polynomial, we might instead want to fit a set of **local** averages to different regions of $X$
+--
+
+- We could define a set of basis functions that are indicators which partition $X$ into $M+1$ disjoint regions based on cutpoints $\xi_1, \xi_2, \dotsc, \xi_{M}$
+
+$$\begin{align*}
+h_1(X) &= I(X < \xi_1)\\
+h_2(X) &= I(\xi_1 \le X < \xi_2)\\
+h_3(X) &= I(\xi_2 \le X < \xi_3)\\
+&\vdots\\
+h_{M+1}(X) &= I(\xi_{M} \le X)\\
+\end{align*}$$
+
+
+---
+
+# Step functions
+
+```{r, message = F, warning=F, fig.width=9, fig.height=6, fig.align="center", echo=F}
+bike %>% ggplot(aes(x=hr, y=cnt)) + geom_point(alpha=.1) + geom_point(data=bike_by_hour, col="red", shape=15, size=5)  +   geom_smooth(method="lm", formula = y ~ I(x < 6) + I(x >= 6&x<12) + I(x >= 12&x<18) + I(x>= 18), linewidth=2) + 
+  xlab("Hour of the day") + ylab("Count of Users") + ggtitle("Even intervals")  + geom_vline(xintercept = c(6, 12, 18), lty=2, linewidth=2, col="green3") + 
+  theme_bw() + theme(text = element_text(size = 16)) 
+```
+
+---
+
+# Step functions
+
+```{r, message = F, warning=F, fig.width=9, fig.height=6, fig.align="center", echo=F}
+bike %>% ggplot(aes(x=hr, y=cnt)) + geom_point(alpha=.1) + geom_point(data=bike_by_hour, col="red", shape=15, size=5)  +   geom_smooth(method="lm",  formula = y ~ I(x < 7) + I(x >= 7&x<9) + I(x >= 9&x<16) + I(x>= 16&x<18) + I(x>= 18), linewidth=2) + 
+  xlab("Hour of the day") + ylab("Count of Users") + ggtitle("Uneven intervals") + geom_vline(xintercept = c(7, 9, 16, 18), lty=2, linewidth=2, col="green3") + 
+  theme_bw() + theme(text = element_text(size = 16)) 
+```
+
+---
+
+# Piecewise polynomials
+
+- Rather than just taking the mean within each disjoint region, we could imagine fitting a polynomial to **just** that subset.
+
+```{r, message = F, warning=F, fig.width=9, fig.height=6, fig.align="center", echo=F}
+bike %>% ggplot(aes(x=hr, y=cnt)) + geom_point(alpha=.1) + geom_point(data=bike_by_hour, col="red", shape=15, size=5)  +   geom_smooth(method="lm",  formula = y ~ (I(x < 6) + I(x >= 6&x<12) + I(x >= 12&x<18) + I(x>= 18))*(x + I(x^2) + I(x^3)), linewidth=2) + 
+  xlab("Hour of the day") + ylab("Count of Users") + ggtitle("Piecewise cubic polynomial") + geom_vline(xintercept = c(6, 12, 18), lty=2, linewidth=2, col="green3") + 
+  theme_bw() + theme(text = element_text(size = 16)) 
+```
+
+---
+
+# Splines
+
+- The piecewise polynomials might fit better, but we still have these irritating discontinuities in the CEF.
+  - We might want to impose some **additional** conditions on the function regarding continuity around the cutpoints.
+--
+
+- A $K-1$th order **spline** with $M$ knots $\xi_1, \xi_2, \dotsc, \xi_{M}$ is a piece-wise polynomial that...
+  - ...is a polynomial of degree $K-1$ on the intervals $(-\infty, \xi_1,], [\xi_1, \xi_2], [\xi_2, \xi_3], \dotsc, [\xi_m, \infty)$
+  - ...has a $j$th derivative that is continuous at each of the knots $\xi_1, \xi_2, \dotsc, \xi_{m}$ for $j = 0, 1, 2, \dotsc, K-2$ 
+--
+
+- Intuitively, if we **also** forced the $k$th derivative to be continuous, we'd recover the **global** polynomial.
+--
+
+- Most common spline is the **cubic** spline $k = 4$ (third order polynomial).
+  - Splines allow for local flexibility while still retaining continuity across $X$.
+  
+---
+
+# Splines
+
+- There are actually multiple ways to define the basis functions for a spline. The most intuitive for understanding how they work is the **truncated power basis**
+
+$$\begin{align*}
+h_{k}(X) &= x^{k-1} & \ \ & k = 1, \dotsc, K\\
+h_{m+K}(X) &= (x - \xi_{m})_+^{K-1} & \ \ & m = 1, \dotsc, M
+\end{align*}$$
+
+where $(\cdot)_+$ denotes a function which returns $\text{max}(\cdot, 0)$
+--
+
+- Splines have $M + K$ "degrees of freedom"
+- **Trade-offs**
+  - Higher $K$ and higher $M$ = better in-sample fit but risks overfitting
+  - Lower $K$ and lower $M$ = poorer in-sample fit (baseline is a global polynomial), but potentially more robust out-of-sample.
+  
+
+---
+
+# Splines
+
+```{r, message = F, warning=F, fig.width=9, fig.height=6, fig.align="center"}
+bike %>% ggplot(aes(x=hr, y=cnt)) + geom_point(alpha=.1) + geom_point(data=bike_by_hour, col="red", shape=15, size=5)  +   geom_smooth(method="lm",  formula = y ~ x + I(x^2) + I(x^3) + I((x-6)>0):I((x - 6)^3) +  I((x-12)>0):I((x - 12)^3) + I((x-18)>0):I((x - 18)^3) , linewidth=2) + 
+  xlab("Hour of the day") + ylab("Count of Users") + ggtitle("Cubic spline with 6 degrees of freedom (+ intercept)") + geom_vline(xintercept = c(6, 12, 18), lty=2, linewidth=2, col="green3") + 
+  theme_bw() + theme(text = element_text(size = 16)) 
+```
+
+---
+
+# Splines
+
+```{r, message = F, warning=F, fig.width=9, fig.height=6, fig.align="center"}
+bike %>% ggplot(aes(x=hr, y=cnt)) + geom_point(alpha=.1) + geom_point(data=bike_by_hour, col="red", shape=15, size=5)  +   geom_smooth(method="lm",  formula = y ~ bs(x, df=6), linewidth=2) + 
+  xlab("Hour of the day") + ylab("Count of Users") + ggtitle("Cubic spline with 6 degrees of freedom (+ intercept)") + geom_vline(xintercept = c(6, 12, 18), lty=2, linewidth=2, col="green3") + 
+  theme_bw() + theme(text = element_text(size = 16)) 
+```
+
+---
+
+# Splines
+
+- Splines with many degrees of freedom have very weird edge behavior - "squiggly" function
+
+```{r, message = F, warning=F, fig.width=9, fig.height=6, fig.align="center", echo=F}
+bike %>% ggplot(aes(x=hr, y=cnt)) + geom_point(alpha=.1) + geom_point(data=bike_by_hour, col="red", shape=15, size=5)  +   geom_smooth(method="lm",  formula = y ~ bs(x, df=15), linewidth=2) + 
+  xlab("Hour of the day") + ylab("Count of Users") + ggtitle("Cubic spline with 15 degrees of fredom") + 
+  theme_bw() + theme(text = element_text(size = 16)) 
+```
