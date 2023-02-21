@@ -1,0 +1,52 @@
+region,fips,state,regionName
+3,01,Alabama,South
+4,02,Alaska,West
+4,04,Arizona,West
+3,05,Arkansas,South
+4,06,California,West
+4,08,Colorado,West
+1,09,Connecticut,Northeast
+3,10,Delaware,South
+3,11,District of Columbia,South
+3,12,Florida,South
+3,13,Georgia,South
+4,15,Hawaii,West
+4,16,Idaho,West
+2,17,Illinois,Midwest
+2,18,Indiana,Midwest
+2,19,Iowa,Midwest
+2,20,Kansas,Midwest
+3,21,Kentucky,South
+3,22,Louisiana,South
+1,23,Maine,Northeast
+3,24,Maryland,South
+1,25,Massachusetts,Northeast
+2,26,Michigan,Midwest
+2,27,Minnesota,Midwest
+3,28,Mississippi,South
+2,29,Missouri,Midwest
+4,30,Montana,West
+2,31,Nebraska,Midwest
+4,32,Nevada,West
+1,33,New Hampshire,Northeast
+1,34,New Jersey,Northeast
+4,35,New Mexico,West
+1,36,New York,Northeast
+3,37,North Carolina,South
+2,38,North Dakota,Midwest
+2,39,Ohio,Midwest
+3,40,Oklahoma,South
+4,41,Oregon,West
+1,42,Pennsylvania,Northeast
+1,44,Rhode Island,Northeast
+3,45,South Carolina,South
+2,46,South Dakota,Midwest
+3,47,Tennessee,South
+3,48,Texas,South
+4,49,Utah,West
+1,50,Vermont,Northeast
+3,51,Virginia,South
+4,53,Washington,West
+3,54,West Virginia,South
+2,55,Wisconsin,Midwest
+4,56,Wyoming,West
