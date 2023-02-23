@@ -486,7 +486,7 @@ bike %>% ggplot(aes(x=hr, y=cnt)) + geom_point(alpha=.1) + geom_point(data=bike_
 --
 
 - We've already done this to some extent:
-  - Setting an **informative prior** in Bayesian regression setting pulls the estimates to our existing beliefs
+  - Setting an **informative prior** in the Bayesian regression setting pulls the estimates to our existing beliefs
   - Sharper prior $\leadsto$ lower variance posterior distributions
 --
 
@@ -720,7 +720,7 @@ print(conflict_ridge_cv)
 
 # Selecting the penalty
 
-- Cross-validation error is not strictly increasing with $\lambda$ - low penalties can lead to **bad** out-of-sample fit!
+- Low penalties can lead to **bad** out-of-sample fit!
 
 ```{r, fig.align = "center", fig.width=8, fig.height=6}
 plot(x=log(conflict_ridge_cv$lambda), y=conflict_ridge_cv$cvm, type='l', xlab="(logged) Lambda", ylab="Cross-validation error")
@@ -761,6 +761,17 @@ $$\sum_{k=1}^K |\beta_k| \le s$$
 # Visualizing the lasso
 
 .center[<img src="assets/lasso_visual.png" alt = "lasso_viz", height="500px">]
+
+---
+
+# Bayesian lasso
+
+- The lasso also has an interpretation as a Bayesian prior placed on $\beta$.
+  - But instead of the normal, the prior is the **Laplace** or double-exponential distribution
+  - Location parameter $\mu = 0$, scale parameter $b$
+--
+
+$$p(\beta_k) = \frac{1}{2b} \exp\bigg\{ -\frac{|\beta_k|}{b}\bigg\}$$
 
 ---
 
@@ -865,4 +876,32 @@ beta_ols
   
 ---
 
+# Causal inference and "double lasso"
 
+- Lasso coefficients are **biased** towards zero
+  - This bias is often desirable for prediction (see Stein's paradox)
+  - But this bias is undesirable for inference (conventional CIs don't have the right coverage).
+--
+
+- Often we have a causal inference problem where the goal is to estimate the effect of some treatment $D_i$ on outcome $Y_i$ under an assumption of  **selection-on-observables** given $X_i$
+  - But we don't know which covariates matter (or possibly their functional forms).
+  - We want to control for variables that predict $Y_i$ and predict $D_i$ - degree of omitted variable bias is a **product** of these two relationships
+
+---
+
+# Causal inference and "double lasso"
+
+- **Belloni, Chernozhukov and Hansen (2014)** suggest an approach that uses the lasso for variable selection but OLS to obtain an unbiased estimator of the treatment effect - the "double lasso"
+
+- **Step 1:** Fit a **lasso** regression of outcome on covariates
+
+$$Y_i = \alpha_0 + \alpha_1 X_{i1} + \alpha_2 X_{i2} + \dotsc \alpha_K X_{iK} + \epsilon_i$$
+
+- **Step 2:** Fit a **lasso** regression of treatment on covariates
+
+$$D_i = \delta_0 + \delta_1 X_{i1} + \delta_2 X_{i2} + \dotsc \delta_K X_{iK} + \epsilon_i$$
+- **Step 3:** Let $A$ denote the set of covariates selected in **either** the first or the second regression.
+
+- **Step 4:** Fit an **OLS** regression of outcome on treatment and the covariates in $A$
+
+$$Y_i = \tau D_i + \sum_{k \in A} \beta_k X_{ik} + \epsilon_i$$
