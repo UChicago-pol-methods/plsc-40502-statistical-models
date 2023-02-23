@@ -25,8 +25,11 @@ library(haven)
 library(estimatr)
 library(knitr)
 library(splines)
+library(lubridate)
 
 options(digits=3)
+
+set.seed(60639)
 
 ```
 
@@ -441,3 +444,425 @@ class: title-slide
 # Regularization
 
 ---
+
+# Regularization
+
+```{r, message = F, warning=F, fig.width=9, fig.height=6, fig.align="center", echo=F}
+bike %>% ggplot(aes(x=hr, y=cnt)) + geom_point(alpha=.1) + geom_point(data=bike_by_hour, col="red", shape=15, size=5) + geom_smooth(method="lm", linewidth=2) + xlab("Hour of the day") + ylab("Count of Users") +
+  theme_bw() + theme(text = element_text(size = 16))     
+``` 
+
+---
+
+# Regularization
+
+```{r, message = F, warning=F, fig.width=9, fig.height=6, fig.align="center", echo=F}
+bike %>% ggplot(aes(x=hr, y=cnt)) + geom_point(alpha=.1) + geom_point(data=bike_by_hour, col="red", shape=15, size=5)  +   geom_smooth(method="lm",  formula = y ~ bs(x, df=15), linewidth=2) + 
+  xlab("Hour of the day") + ylab("Count of Users") +
+  theme_bw() + theme(text = element_text(size = 16)) 
+```
+
+---
+
+# Regularization
+
+```{r, message = F, warning=F, fig.width=9, fig.height=6, fig.align="center", echo=F}
+bike %>% ggplot(aes(x=hr, y=cnt)) + geom_point(alpha=.1) + geom_point(data=bike_by_hour, col="red", shape=15, size=5)  +   geom_smooth(method="gam", formula = y ~ s(x, bs="cr"), linewidth=2) + 
+  xlab("Hour of the day") + ylab("Count of Users")  + 
+  theme_bw() + theme(text = element_text(size = 16)) 
+```
+
+---
+
+# Regularization
+
+- The **error** of an estimator is a function of both its **bias** and its **variance**
+  - We often talk about **unbiased** estimation as a goal of statistics?
+  - Why? - Because we can accurately characterize the remaining error - the variance.
+--
+
+- But in other settings, we just want to know whether our point estimate is close to the truth
+  - In this setting we might be willing to accept some **bias** in exchange for a reduction in variance.
+--
+
+- We've already done this to some extent:
+  - Setting an **informative prior** in Bayesian regression setting pulls the estimates to our existing beliefs
+  - Sharper prior $\leadsto$ lower variance posterior distributions
+--
+
+- What sort of bias do we want to induce?
+  - In a **regression**: bias the coefficients towards *zero*
+  - Intuition: *betting on sparsity* - most regressors are irrelevant and their coefficients should be pulled towards zero.
+
+---
+
+# Mean Squared Error
+
+- Recall that the **mean squared error** of an estimator $\hat{\theta}$ of some parameter $\theta$ can be decomposed into the (squared) **bias** and the **variance**
+
+$$E\bigg[(\hat{\theta} - \theta)^2\bigg] = E\bigg[\theta^2\bigg] - 2\theta E\bigg[\hat{\theta}\bigg] + \theta^2$$
+--
+
+- Add and subtract $E[\hat{\theta}]^2$
+
+$$E\bigg[(\hat{\theta} - \theta)^2\bigg] = \bigg(E[\theta^2]-  E[\hat{\theta}]^2\bigg)  + E[\hat{\theta}]^2 - 2\theta E[\hat{\theta}] + \theta^2$$
+--
+
+- And factoring to get the bias squared
+
+$$\underbrace{E\bigg[(\hat{\theta} - \theta)^2\bigg]}_{\text{MSE}} = \underbrace{\bigg(E[\theta^2]-  E[\hat{\theta}]^2\bigg)}_{\text{Variance}}  + \underbrace{\bigg(E[\hat{\theta} - \theta]\bigg)^2}_{\text{Squared Bias}}$$
+
+---
+
+# Notation notes
+
+- We're going to work with a standard regression setting with outcome $Y_i$ and covariate matrix $\mathbf{X}$.
+  - We'll assume the covariates are **standardized** to have mean zero and variance 1 (we don't want our regularizer to depend on the scale of the inputs).
+--
+
+- Let $||\cdot||_p$ denote the $L_p$ norm.
+  - The $L_2$ norm is the **euclidean norm**: $|| \beta ||_2 = \sqrt{\sum_{k=1}^K |\beta|^2}$
+  - The $L_1$ norm is the sum of the absolute values  $|| \beta ||_1 = \sum_{k=1}^K |\beta|$
+  - More generally, the $L_p$ norm is: $|| \beta ||_p = \bigg(\sum_{k=1}^K |\beta|^p\bigg)^{\frac{1}{p}}$
+  
+---
+
+# Example: Predicting Peace Agreements
+
+- Many predictive involve **large numbers of covariates** relative to the total number of observations
+  - If all of the covariates are in some sense "relevant" then you're probably out of luck.
+  - But in most settings, only a handful of the covariates actually matter...the problem is that you don't know which ones ex-ante.
+--
+
+- The **UCDP Peace Agremeents dataset** contains information on peace agreements to armed conflicts from the period 1975-2021
+  - We may want to know what factors predict durable peace agreements.
+  
+```{r, warning=F,message=F}
+pa <- read_csv("data/ucdp-peace-agreements-221.csv")
+```
+
+--
+
+- Some brief pre-processing of the outcome
+
+```{r}
+# If agreement remains, then duration = "now"
+pa$duration_complete <- pa$duration
+pa$duration[is.na(pa$duration)] <- ymd("2021-12-31")
+pa$durationDays <- as.numeric(pa$duration - pa$pa_date)
+# Fill in missing "ended' data
+pa$ended_full <- as.numeric(pa$ended)
+pa$ended_full[is.na(pa$ended_full)] <- 0
+```
+
+---
+
+# Example: Predicting Peace Agreements
+
+```{r, echo=F, warning=F, message=F, fig.align="center", fig.width=9, fig.height=6}
+pa %>% ggplot(aes(x=durationDays)) + geom_histogram() + theme_bw() + xlab("Peace Agreement Duration (Days)")
+```
+
+---
+
+# Example: Predicting Peace Agreements
+
+- Our covariates are a large number of coded features for each agreement
+
+```{r}
+pa_x <- model.matrix(durationDays ~ as.factor(region) + year + as.factor(incompatibility) +
+                       cease + intarmy + ddr + withd + mil_prov + pp + intgov + intciv +
+                       elections + interim + natalks + shagov + pol_prov + aut + fed + ind +
+                       ref + shaloc + regdev + cul + demarcation + locgov + terr_prov + amn +
+                       pris + recon + return + justice_prov + reaffirm + outlin + pko + gender +
+                       co_impl + termdur + txt + as.factor(inclusive) + as.factor(pa_type) +
+                       as.factor(out_iss) + as.factor(frame), data=pa)[,-1]
+```
+
+- We have 55 covariates across 374 observations.
+  - We *can* get an OLS estimate, but our sense is that these will be incredibly noisy.
+
+---
+
+# Ridge regression
+
+- Our typical (gaussian) linear regression estimator finds the $\beta$ that **minimizes** the residual sum of squares (RSS)
+
+$$\text{RSS} = \sum_{i=1}^N (Y_i - X_i^{\prime}\beta)^2$$
+- For non-gaussian models, replace the residual sum of squares with the log-likelihood (the RSS *is* the negative log-likelihood for a gaussian)
+
+--
+
+- **Ridge regression** augments the objective function by adding a penalty term
+
+$$\sum_{i=1}^N (Y_i - X_i^{\prime}\beta)^2 + \lambda\sum_{k=1}^K \beta_k^2$$
+where $\lambda$ is a user-specified penalty parameter
+--
+
+- Note that we'll typically avoid regularizing the **intercept** $\beta_0$.
+
+---
+
+# Bayesian interpretation
+
+- Ridge regression has an interpretation in terms of a **bayesian regression**
+- Consider our normal model with:
+
+$$Y_i |X_i, \beta \sim \text{Normal}(X_i^{\prime}\beta, \sigma^2)$$
+--
+
+- The log-posterior can be written as
+
+$$\log p(\beta | \mathbf{X}, Y) \propto \log p(Y | \mathbf{X}, \beta) + \log p(\beta)$$
+--
+
+- In a gaussian model, the first part is just the (negative) residual sum of squares
+
+$$\log p(\beta | \mathbf{X}, Y) \propto - \frac{1}{2\sigma^2}\sum_{i=1}^N  (Y_i - X_i^{\prime}\beta)^2  + \log p(\beta)$$
+---
+
+# Bayesian interpretation
+
+- Now, suppose we put a conventional normal prior on $\beta$
+
+$$\beta \sim \text{Normal}(0, \tau^2I)$$
+--
+
+- $\log p(\beta)$ can then be written as:
+
+$$\begin{align*}\log p(\beta) &= -\frac{1}{2\tau^2} \sum_{k=1}^K (\beta_k - 0)^2\\
+&= -\frac{1}{2\tau^2} \sum_{k=1}^K \beta_k^2\end{align*}$$
+--
+
+- Plugging back in to the log-posterior, we have
+
+$$\log p(\beta | \mathbf{X}, Y) \propto - \frac{1}{2\sigma^2}\sum_{i=1}^N  (Y_i - X_i^{\prime}\beta)^2  - \frac{1}{2\tau^2} \sum_{k=1}^K \beta_k^2$$
+---
+
+# Bayesian interpretation
+
+- Rearranging terms and dropping scaling constants, we have
+
+$$\log p(\beta | \mathbf{X}, Y) \propto - \sum_{i=1}^N  (Y_i - X_i^{\prime}\beta)^2  - \frac{\sigma^2}{\tau^2} \sum_{k=1}^K \beta_k^2$$
+--
+
+- With $\lambda = \frac{\sigma^2}{\tau^2}$, this is just the negative of the ridge regression objective function
+  - Maximizing the log-posterior (finding the MAP estimate) is equivalent to minimizing a ridge regression objective! 
+
+---
+
+# Visualizing the penalty
+
+- Penalized regression can also be interpreted as a **constrained optimization problem**
+- Find the $\beta$ that minimizes:
+
+$$\text{RSS} = \sum_{i=1}^N (Y_i - X_i^{\prime}\beta)^2$$
+- Subject to
+
+$$\sum_{k=1}^K \beta_k^2 \le s$$
+--
+
+- We prefer the unconstrained formulation with $\lambda$ for computation, but the constrained view allows us to get a sense of how the ridge regularizer is operating.
+
+---
+
+# Visualizing the penalty
+
+.center[<img src="assets/ridge_visual.png" alt = "ridge_viz", height="500px">]
+
+---
+
+# Example: Predicting Peace Agreements
+
+- The standard library for estimating penalized regressions in R is `glmnet`
+  - By default, R will fit the model for a **regularization sequence** of $\lambda$
+  - Actually choosing a $\lambda$ is done via cross-validation
+
+```{r, echo=F, warning=F, message=F}
+library(glmnet)
+```
+--
+
+- Let's fit a gaussian model (we could do poisson as well, but gaussian is easy)
+
+```{r}
+# alpha=0 is the ridge penalty
+conflict_ridge <- glmnet(x=pa_x, y=log(pa$durationDays), family="gaussian", alpha=0, standardize=T)
+```
+
+---
+
+# Example: Predicting Peace Agreements
+
+- How is the in-sample fit?
+
+```{r, fig.align = "center", fig.width=8, fig.height=6}
+plot(x=log(conflict_ridge$lambda), y=1-conflict_ridge$dev.ratio, type='l', xlab="(logged) Lambda", ylab="1 - Fraction of the deviance explained")
+```
+
+---
+
+# Selecting the penalty
+
+- $\lambda$ is typically selected via cross-validation
+
+```{r}
+conflict_ridge_cv <- cv.glmnet(x=pa_x, y=log(pa$durationDays), family="gaussian", alpha=0, standardize=T)
+print(conflict_ridge_cv)
+```
+--
+
+- `cv.glmnet` typically provides two choices of $\lambda$
+  - The first being the value that minimizes the cross-validation error (`min`)
+  - The second being the largest value of $\lambda$ that is still within 1 standard error from the minimum (`1se`)
+
+---
+
+# Selecting the penalty
+
+- Cross-validation error is not strictly increasing with $\lambda$ - low penalties can lead to **bad** out-of-sample fit!
+
+```{r, fig.align = "center", fig.width=8, fig.height=6}
+plot(x=log(conflict_ridge_cv$lambda), y=conflict_ridge_cv$cvm, type='l', xlab="(logged) Lambda", ylab="Cross-validation error")
+```
+
+---
+
+# Lasso
+
+- **Ridge regression** regularizes the coefficients towards zero, but it does not guarantee that some coefficients are exactly zeroed out.
+  - In other words, it does not do **model selection**
+--
+
+- We would like to have a penalty term that results in **sparse** solutions - ones where many coefficients are explicitly set to $0$
+  - The $L_1$ penalty accomplishes this!
+  - The **least absolute shrinkage and selection operator** or lasso is the same penalized regression as the ridge regression but with the sum of the **absolute** rather than squared coefficients in the penalty
+--
+
+$$\sum_{i=1}^N (Y_i - X_i^{\prime}\beta)^2 + \lambda\sum_{k=1}^K |\beta_k|$$
+--
+
+- The $L_1$ norm is non-differentiable with respect to the covariates at $0$, which leads to the lasso acting as a "selection" operator on the elements of $\beta$
+
+---
+
+# Visualizing the lasso
+
+- As with ridge, the lasso has an expression in terms of a constrained optimization problem:
+- Find the $\beta$ that minimizes:
+
+$$\text{RSS} = \sum_{i=1}^N (Y_i - X_i^{\prime}\beta)^2$$
+- Subject to
+
+$$\sum_{k=1}^K |\beta_k| \le s$$
+
+---
+
+# Visualizing the lasso
+
+.center[<img src="assets/lasso_visual.png" alt = "lasso_viz", height="500px">]
+
+---
+
+# Example: Predicting Peace Agreements
+
+```{r}
+# alpha=1 is the lasso penalty
+conflict_lasso <- glmnet(x=pa_x, y=log(pa$durationDays), family="gaussian", alpha=1)
+```
+
+---
+
+# Example: Predicting Peace Agreements
+
+- We can count the number of coefficients set to $0$ as $\lambda$ increases
+
+```{r, fig.align = "center", fig.width=8, fig.height=6}
+plot(x=log(conflict_lasso$lambda), y=colSums(coef(conflict_lasso) == 0), type='l', xlab="(logged) Lambda", ylab="Number of zero coefficients")
+```
+
+---
+
+# Example: Predicting Peace Agreements
+
+- In-sample fit improves as we reduce $\lambda$
+
+```{r, fig.align = "center", fig.width=8, fig.height=6}
+plot(x=log(conflict_lasso$lambda), y=1- conflict_lasso$dev.ratio, type='l', xlab="(logged) Lambda", ylab="1 - Fraction of the deviance explained")
+```
+
+---
+
+# Example: Predicting Peace Agreements
+
+- We again choose $\lambda$ via cross-validation
+
+```{r}
+conflict_lasso_cv <- cv.glmnet(x=pa_x, y=log(pa$durationDays), family="gaussian", alpha=1)
+print(conflict_lasso_cv)
+```
+
+
+---
+
+# Example: Predicting Peace Agreements
+
+- Cross-validation error does not strictly improve with lower $\lambda$
+
+```{r, fig.align = "center", fig.width=8, fig.height=6}
+plot(x=log(conflict_lasso_cv$lambda), y=conflict_lasso_cv$cvm, type='l', xlab="(logged) Lambda", ylab="Cross-validation error")
+```
+
+---
+
+# Lasso as variable selection
+
+- **Variable selection** is a common problem in statistics
+  - We assume a world where among our covariates $X$, some small subset have actual non-zero coefficients (they "matter") but most don't.
+  - The problem is that ex-ante, we have no idea what the relevant covariates actually are!
+--
+
+- Classical approaches
+  - **Forward selection** - Start with an empty model and add variables one-by-one.
+  - **Backward selection** - Start with a full model and remove the least correlated variables one-by-one.
+--
+
+- The lasso can be thought of as an alternative to these techniques
+  - Advantages in computational time/feasibility as well as potential **predictive** benefits from shrinkage.
+
+---
+
+# Example: Predicting Peace Agreements
+
+- Let's fit the lasso with the "best" cross-validated $\lambda$
+
+```{r}
+conflict_lasso_best <- glmnet(x=pa_x, y=log(pa$durationDays), family="gaussian", alpha=1, lambda=conflict_lasso_cv$lambda.min)
+```
+
+- Which coefficients are non-zero?
+
+```{r}
+coef(conflict_lasso_best)[,1][coef(conflict_lasso_best)[,1] != 0]
+```
+
+---
+
+# Example: Predicting Peace Agreements
+
+- What if we took the "selected" variables and just ran OLS?
+
+```{r}
+pa_x_use <- cbind(1, pa_x[,names(coef(conflict_lasso_best)[,1][coef(conflict_lasso_best)[,1] != 0])[-1]])
+beta_ols <- as.vector(solve(t(pa_x_use)%*%pa_x_use)%*%t(pa_x_use)%*%log(pa$durationDays))
+names(beta_ols) <- names(coef(conflict_lasso_best)[,1][coef(conflict_lasso_best)[,1] != 0])
+beta_ols
+```
+--
+
+- The OLS coefficients post-selection are larger in magnitude!
+  - Why? Lasso induces a **bias** towards zero
+  
+---
+
+
