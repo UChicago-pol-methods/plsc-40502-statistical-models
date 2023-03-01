@@ -224,7 +224,7 @@ Our posterior mean estimate for the share of support for the tariff in Rhode Isl
 
 For the state and region model:
 
-Next, generate predicted probabilities for each cell.
+Generate predicted probabilities for each cell.
 
 ```{r}
 state_region_fitted <- fitted(mrp_state_region, newdata=acs_2020, summary=F)
