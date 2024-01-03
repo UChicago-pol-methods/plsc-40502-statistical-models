@@ -8,6 +8,7 @@ output:
     css: [default, uchicago_pol_meth.css]
     nature:
       highlightLines: true
+      ratio: '16:9'
       
 ---
 class: title-slide
@@ -33,7 +34,7 @@ options(digits=3)
 --
 
 - Logistics:
-  - Lectures T/Th - 2:00am - 12:20pm;
+  - Lectures Th - 2:00pm - 4:50pm;
   - 3 Problem Sets (~ 2 weeks)
   - Final paper project (8-12 pages)
   - My office hours: Tuesdays 4pm-6pm (Pick 328)
@@ -62,10 +63,9 @@ $$
 
 - .maroon[Lectures]
   - Topics organized by week
-  - Tuesday lecture: Introduction + higher-level overview
-  - Thursday lecture: More in-depth details + applications
-    - Lectures are the ``course notes" -- readings are the reference manuals.
+  - Lectures are the "course notes" -- readings are the reference manuals.
 --
+
 - .maroon[Readings]
   - Mix of textbooks and papers
   - All readings available digitally on .maroon[Canvas]
@@ -76,15 +76,9 @@ $$
 
 - .maroon[Problem sets] (35% of your grade)
   - Meant as a check on your understanding of the material and a way of communicating
-  with me about the course.
-  - The goal is learning by doing. So I'm not grading on correctness but more 
-  on effort.
-  - Solutions **will be posted** a week after the problem set is released. You
-  should work on the problem sets without them but check your work afterward.
-  - In addition to your write-up, you will also submit a brief survey about which questions
-  you found challenging and needed to consult the solutions for + any concepts that are still unclear
-  - Collaboration is **strongly encouraged** -- you should ask and answer questions on our private class
-  Stack Overflow (link + invitation in the syllabus).
+  with me about the course.clear
+  - Collaboration is **strongly encouraged** -- you should ask and answer questions on our Ed discussion board.
+  - Graded hollistically on a plus/check/minus system.
   
 ---
 
@@ -99,10 +93,11 @@ $$
     - Survey data is a great place to ask descriptive questions
     - But feel free to use other sources or ask different types of questions - just talk to me about it!
 --
+
 - .maroon[Final Project Timeline]
   - **February 2nd**: 1 page project memo due
-  - **February 28th/March 2nd**: Research presentations in-class (10-15 min. talks + Q&A)
-  - **March 9**: Final paper due
+  - **February 29th**: Research presentations in-class (10-15 min. talks + Q&A)
+  - **March 7**: Final paper due
 
 ---
 
@@ -340,7 +335,7 @@ $$\epsilon | \mathbf{X} \sim \mathcal{N}(0, \sigma^2)$$
 - What do we need to do inference on $\hat{\beta}$?
   - We almost never assume homoskedasticity because "robust" SE estimators are ubiquitous
   - Even some forms of error correlation are permitted ("cluster" robust SEs)
-  - Sample sizes are usually large enough where Central Limit Theorem kicks in since $\hat{\beta}$ can be written as a weighted sum over $Y_i$. So normality isn't that important.
+  - Sample sizes are usually large enough where Central Limit Theorem implies a normal sampling distribution is a reasonable approximation.
 
 ---
 
@@ -927,11 +922,68 @@ $$\hat{\pi} = \frac{1}{n} \sum_{i=1}^n y_i$$
    - Here it's strictly negative over the domain of $\pi$
 
 $$\frac{\partial^2}{\partial\pi^2}\ell(\pi | \mathbf{y}) = \sum_{i=1}^n - \frac{y_i}{\pi^2} - \frac{1-y_i}{(1-\pi)^2}$$
+$$\frac{\partial^2}{\partial\pi^2}\ell(\pi | \mathbf{y}) = -\frac{1}{\pi^2}\sum_{i=1}^n y_i - \frac{1}{(1-\pi)^2}\sum_{i=1}^n (1-y_i)$$
 --
 
 - All that work and it turns out the MLE is just the **sample mean**!
   - Won't always be the case, but here the MLE is also *unbiased* because of what we know about the sample mean.
   
+---
+
+# CRLB
+
+- Lastly, can we can also show that this particular estimator reaches the Cramer-Rao Lower Bound?
+- Start with the known variance of the sample mean $\hat{\pi}$
+
+$$Var(\hat{\pi}) = \frac{\pi(1-\pi)}{n}$$
+--
+
+- Next, let's write the Fisher information
+
+$$\mathcal{I}_n = -\mathbb{E}\left[\frac{\partial^2}{\partial\theta^2} \log f(\mathbf{y}|\theta_0)\right]$$
+
+--
+
+- From above
+
+$$\mathcal{I}_n = -\mathbb{E}\left[-\frac{1}{\pi^2}\sum_{i=1}^n y_i - \frac{1}{(1-\pi)^2}\sum_{i=1}^n (1-y_i)\right]$$
+$$\mathcal{I}_n = \mathbb{E}\left[\frac{1}{\pi^2}\sum_{i=1}^n y_i + \frac{1}{(1-\pi)^2}\sum_{i=1}^n (1-y_i)\right]$$
+
+---
+
+# CRLB
+
+- Pulling out the constants and applying linearity
+
+$$\mathcal{I}_n = \frac{1}{\pi^2}\sum_{i=1}^n \mathbb{E}[y_i] + \frac{1}{(1-\pi)^2}\sum_{i=1}^n \mathbb{E}[(1-y_i)]$$
+
+--
+
+- Under the model
+
+$$\mathcal{I}_n = \frac{n \pi}{\pi^2}+ \frac{n (1-\pi)}{(1-\pi)^2}$$
+--
+
+- Cancelling and factoring
+
+$$\mathcal{I}_n = n\left(\frac{1}{\pi} + \frac{1}{(1-\pi)}\right)$$
+
+---
+
+# CRLB
+
+- Adding the fractions
+
+$$\mathcal{I}_n = \frac{n}{\pi(1-\pi)}$$
+
+--
+
+The CRLB (for an unbiased estimator) is the inverse of the Fisher information
+
+$$\frac{1}{\mathcal{I}_n} = \frac{\pi(1-\pi)}{n}$$
+
+which is equivalent to the variance of our estimator. This estimator attains the CRLB (it's a minimum-variance unbiased estimator)!
+
 ---
 
 # Conclusion
