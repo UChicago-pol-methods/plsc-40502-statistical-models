@@ -1,4 +1,4 @@
-# PLSC 40502: Data Analysis with Statistical Models (Winter 2023)
+# PLSC 40502: Data Analysis with Statistical Models (Winter 2024)
 
 ## Course description
 
@@ -9,10 +9,8 @@ We use this repository to distribute course materials: slides, assignments, data
 
 To download a file: Locate the file in the repository. Then "right-click" on the "Raw" button and save to your computer.
 
-# Asking/answering questions
-
-The course's private StackOverflow site is https://stackoverflow.com/c/plsc-40502-statistical-models/. Use this private forum to ask and answer any question related to the course.
+However, we recommend setting up a Github account and cloning the repository on your local machine. [Github Desktop](https://desktop.github.com/) provides a relatively easy-to-use GUI interface to interacting with Git.
 
 # Readings and assignment submissions
 
-Readings will be posted on the course's Canvas site: https://canvas.uchicago.edu/courses/47307 - You should also submit your assignments and final project here.
+Readings will be posted on the course's Canvas site: https://canvas.uchicago.edu/courses/54700 - You should also submit your assignments and final project there.
