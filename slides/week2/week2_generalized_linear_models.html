@@ -519,7 +519,7 @@ where `\(h(y)\)`, `\(A(\theta)\)`, `\(\eta(\theta)\)` and `\(T(y)\)` are known f
 
 `$$E[Y_i | X_i] = Pr(Y_i = 1 | X_i) = \pi_i$$`
 
-`$$\log\bigg(\frac{\pi}{1-\pi}\bigg) = X_i^{\prime}\beta$$`
+`$$\log\bigg(\frac{\pi_i}{1-\pi_i}\bigg) = X_i^{\prime}\beta$$`
 --
 
 - Alternatively, this is written in terms of the &quot;inverse-link&quot; function (the logistic function) that relates `\(\pi_i\)` to `\(g^{-1}(X_i^{\prime}\beta)\)`
@@ -1242,7 +1242,7 @@ class: title-slide
 
 - And therefore, the asymptotic variance of `\(\hat{\theta}\)` is
 
-`$$Var(\hat{\theta}) = \frac{1}{n}\bigg[\mathbf{E}[-\ell^{\prime\prime}(\theta_0|\mathbf{y})]\bigg]^{-1}\bigg[Var(g_i(Y_i|\theta_0))\bigg]\bigg[\mathbf{E}[-\ell^{\prime\prime}(\theta_0|\mathbf{y})]\bigg]^{-1}$$`
+`$$Var(\hat{\theta}) = \bigg[\mathbf{E}[-\ell^{\prime\prime}(\theta_0|\mathbf{y})]\bigg]^{-1}\bigg[Var(g_i(Y_i|\theta_0))\bigg]\bigg[\mathbf{E}[-\ell^{\prime\prime}(\theta_0|\mathbf{y})]\bigg]^{-1}$$`
 
 ---
 
@@ -1253,12 +1253,6 @@ class: title-slide
   - Instead, we&#39;ll use a different plug-in estimator using the outer product of the gradient of each observation at the MLE.
 
 `$$\widehat{Var(\hat{\theta})} = \bigg[-\sum_{i=1}^n h_i(Y_i|\hat{\theta})\bigg]^{-1}\bigg[\sum_{i=1}^n g_i(Y_i|\hat{\theta})  g_i(Y_i|\hat{\theta}) ^{\prime}\bigg]\bigg[-\sum_{i=1}^n h_i(Y_i|\hat{\theta})\bigg]^{-1}$$`
-
--- 
-
-- If you want to see where `\(\frac{1}{n}\)` went:
-
-`$$\widehat{Var(\hat{\theta})} = \frac{1}{n}\bigg[-\frac{1}{n}\sum_{i=1}^n h_i(Y_i|\hat{\theta})\bigg]^{-1}\bigg[\frac{1}{n}\sum_{i=1}^n g_i(Y_i|\hat{\theta})  g_i(Y_i|\hat{\theta}) ^{\prime}\bigg]\bigg[- \frac{1}{n} \sum_{i=1}^n h_i(Y_i|\hat{\theta})\bigg]^{-1}$$`
 
 ---
 
