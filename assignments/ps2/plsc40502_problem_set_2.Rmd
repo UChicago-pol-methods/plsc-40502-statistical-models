@@ -3,9 +3,9 @@ title: 'PLSC 40502: Problem Set 2'
 author: "YOUR NAME"
 date: "January 19, 2024"
 output:
+  pdf_document: default
   html_document:
     df_print: paged
-  pdf_document: default
 ---
   
 ```{r setup, include=FALSE}
