@@ -443,7 +443,7 @@ class: title-slide
 
 - We're working with R, so we'll be using the `Rstan` interface to Stan
 - **To Install**
-  - Install the *latest development version* (2.26) directly from [mc-stan.org](https://mc-stan.org/) 
+  - Install the *latest development version* (2.34) directly from [mc-stan.org](https://mc-stan.org/) 
   - Currently, the version on CRAN uses slightly dated syntax
 
 ```{r, eval=F}
@@ -1405,7 +1405,7 @@ elections_county %>% filter(state %in% c("IL", "TX", "CA")) %>% ggplot(aes(y=dem
 
 - Calculate the leave-one-out statistic
 
-```{r, warning=F, message=F}
+```{r, warning=F, message=F, results=FALSE}
 library(loo)
 ```
 
