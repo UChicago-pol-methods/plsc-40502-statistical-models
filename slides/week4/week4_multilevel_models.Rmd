@@ -174,6 +174,9 @@ $$\mu = (B_0 + \mathbf{X}^{\prime}\mathbf{X})^{-1}(B_0b_0 + \mathbf{X}^{\prime}\
 --
 
 - Note again how the posterior distribution combines the data and the prior with the influence of the prior diminishing as the number of observations grows.
+--
+
+- $\sigma^2$ also has a conditional that is inverse-gamma with a similar intuition for the updates, but we'll skip that and keep our random walk sampler for $\sigma^2$ to illustrate the "Metropolis-in-Gibbs" approach.
 
 ---
 
@@ -548,10 +551,10 @@ model{
 ```{stan, output.var='modelfor', eval=F, tidy=F}
 model{
   for (k in 1:K){
-    beta[k] ~ normal(0, 10)
+    beta[k] ~ normal(0, 10);
   }
   for (n in 1:N){
-    y[n] ~ bernoulli_logit(X[n] * beta)
+    y[n] ~ bernoulli_logit(X[n] * beta);
   }
 }
 ```
@@ -587,7 +590,7 @@ parameters {
   real<lower = 0> sigma; // standard deviation
 }
 model {
-  beta ~ normal(0, 9); // multivariate normal prior
+  beta ~ normal(0, 3); // multivariate normal prior
   sigma ~ inv_gamma(0.001/2, 0.001/2); // inverse gamma
   y ~ normal(X * beta, sigma); // * is matrix multiplication if terms are matrices
 }

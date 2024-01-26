@@ -516,6 +516,9 @@ class: title-slide
 --
 
 - Note again how the posterior distribution combines the data and the prior with the influence of the prior diminishing as the number of observations grows.
+--
+
+- `\(\sigma^2\)` also has a conditional that is inverse-gamma with a similar intuition for the updates, but we&#39;ll skip that and keep our random walk sampler for `\(\sigma^2\)` to illustrate the &quot;Metropolis-in-Gibbs&quot; approach.
 
 ---
 
@@ -914,10 +917,10 @@ model{
 ```stan
 model{
   for (k in 1:K){
-    beta[k] ~ normal(0, 10)
+    beta[k] ~ normal(0, 10);
   }
   for (n in 1:N){
-    y[n] ~ bernoulli_logit(X[n] * beta)
+    y[n] ~ bernoulli_logit(X[n] * beta);
   }
 }
 ```
@@ -954,7 +957,7 @@ parameters {
   real&lt;lower = 0&gt; sigma; // standard deviation
 }
 model {
-  beta ~ normal(0, 9); // multivariate normal prior
+  beta ~ normal(0, 3); // multivariate normal prior
   sigma ~ inv_gamma(0.001/2, 0.001/2); // inverse gamma
   y ~ normal(X * beta, sigma); // * is matrix multiplication if terms are matrices
 }
