@@ -848,6 +848,11 @@ $$\text{elppd} = \sum_{i=1}^n E_f[\log p_{\text{post}} (\tilde{y}_i)] = \sum_{i=
 $$\text{lppd} = \sum_{i=1}^n \log p_{\text{post}} (y_i)$$
 --
 
+- We can calculate it by averaging over our $S$ posterior samples
+
+$$\widehat{\text{lppd}} = \sum_{i=1}^n \log \bigg( \frac{1}{S} \sum_{s=1}^S p(y_i | \theta^s)\bigg)$$
+--
+
 - But here we know that it's going to be biased for the "out-of-sample" predictive error due to over-fitting.
 --
 
@@ -860,7 +865,6 @@ $$\text{lppd} = \sum_{i=1}^n \log p_{\text{post}} (y_i)$$
   - For each fold $k$, estimate the model on the $K-1$ other folds 
   - Using that model, calculate the log-predictive density for the observations in the $k$th fold
   - The $k$th fold is the "held-out" (or "test" set), the $K-1$ remaining folds are the "training" set
-  
 --
 
 - When $K = N$, this is often known as **"leave-one out" cross-validation**
@@ -869,11 +873,48 @@ $$\text{lppd} = \sum_{i=1}^n \log p_{\text{post}} (y_i)$$
 
 # Leave-one-out CV 
 
-- `loo` implements a leave-one-out cross-validation method that does not require re-fitting the model by using importance-sampling (Vehtari, Gelman and Gabry, 2017)
-  - And interestingly, it's asymptotically equivalent to the WAIC ("Watanabe-Akaike (or widely applicable) information criterion")
+- From Vehtari, Gelman and Gabry (2017), our "leave-one-out" estimate of the expected log predictive density is:
+
+$$\text{elpd}_{\text{loo}} = \sum_{i=1}^n \log p(y_i | y_{-i})$$
+
 --
 
-- In order to use `loo`, we need the log-likelihood evaluated at each observation. This comes by default in canned `rstanarm` models but for custom models we need to specify to return it in the `generated quantities` block
+- In principle, this requires re-fitting the model to $N$ datasets (with a single observation removed). However, it is possible to obtain an estimate of $\log p(y_i | y_{-i})$ using the full model fit. Note:
+
+$$p(y_i | y_{-i}) = \int p(y_i | \theta) p(\theta | y_{-i}) d\theta$$
+
+--
+
+- We can calculate $p(y_i | \theta)$ for a given draw of theta.
+  - However, we only have draws from $p(\theta | y)$ (our posterior).
+  - The solution is to re-weight our draws such that, averaging over them yields an integral over $p(\theta | y_{-i})$
+  
+---
+
+# Leave-one-out CV 
+
+- Ultimately, we need to re-weight by $\frac{p(\theta_s | y_{-i})}{p(\theta_s | y)}$. Gelfand, Dey and Chang (1992) show that under conditional independence in the model:
+
+$$\frac{p(\theta_s | y_{-i})}{p(\theta_s | y)} =  \frac{p(\theta_s | y_{-i})}{p(\theta_s | y_i, y_{-i})} \propto \frac{p(\theta_s | y_{-i})}{p(y_i | \theta_s)p(\theta_s | y_{-i})} = \frac{1}{p(y_i | \theta_s)}$$
+
+- Let $r^s_i = \frac{1}{p(y_i | \theta^s)}$ or the importance weight calculated for monte carlo sample $s$
+- Then our monte carlo estimate of $p(y_i | y_{-i})$ is
+
+$$p(y_i | y_{-i}) = \frac{\sum_{s=1}^S r_i^s p(y_i | \theta^s)}{\sum_{s=1}^S r_i^s}$$
+--
+
+- Unfortunately, these importance weights are very poorly behaved (high variance). 
+- Vehtari, Gelman and Gabry (2017) propose an alternative method for estimating the importance weights: **pareto-smoothed-importance-sampling** (PSIS)
+  - Fit a Pareto distribution to the distribution of the importance ratio weights to stablize the variance of the weights.
+--
+
+- This PSIS-LOO cross-validation method is implemented in the `loo` R package.
+
+---
+  
+# Leave-one-out CV 
+
+- In order to use `loo`, we need the log-likelihood evaluated at each observation. This comes by default in canned `rstanarm` or `brms` models but for custom models we need to specify to return it in the `generated quantities` block
 - For the typical normal regression:
 
 ```{stan, output.var="loo.ex", eval=F}
@@ -889,8 +930,11 @@ for (n in 1:N) log_lik[n] = normal_lpdf(y[n] | X[n, ] * beta, sigma);
 
 - Once specified, we can obtain an estimate of the expected log predictive accuracy 
 
-```{r, warning=F, messsage=F, cache=T}
+```{r, warning=F, message=F, cache=T, }
 library(loo)
+```
+
+```{r, warning=F, message=F, cache=T}
 loo_reg <- loo(model_fit, pars="log_lik")
 loo_reg$estimates
 ```
@@ -1019,7 +1063,7 @@ parameters{
 
 ```{stan output.var='model.int', eval=F, tidy=F}
 model{
-  beta ~ normal(0, 9); // normal prior on coefficients
+  beta ~ normal(0, 3); // normal prior on coefficients
   alpha ~ normal(0, sigma_a); // normal distribution on random intercepts
   sigma ~ inv_gamma(0.001/2, 0.001/2); 
   sigma_a ~ inv_gamma(0.001/2, 0.001/2);
@@ -1050,7 +1094,7 @@ parameters{
   real<lower=0> sigma_a;
 }
 model{
-  beta ~ normal(0, 9); // normal prior on coefficients
+  beta ~ normal(0, 3); // normal prior on coefficients
   alpha ~ normal(0, sigma_a); // normal distribution on random intercepts
   sigma ~ inv_gamma(0.001/2, 0.001/2); 
   sigma_a ~ inv_gamma(0.001/2, 0.001/2);
@@ -1272,7 +1316,7 @@ model{
   tau ~ cauchy(0, 2.5);
   Omega ~ lkj_corr(2);
   sigma ~ inv_gamma(0.001/2, 0.001/2); //Inverse-gamma
-  mu_beta ~ normal(0, 9);
+  mu_beta ~ normal(0, 3);
   beta ~ multi_normal(mu_beta, quad_form_diag(Omega, tau));
   for (n in 1:N) {
     y[n] ~ normal(X[n] * beta[J_i[n]], sigma);
@@ -1307,7 +1351,7 @@ model{
   tau ~ cauchy(0, 2.5);
   Omega ~ lkj_corr(2);
   sigma ~ inv_gamma(0.001/2, 0.001/2); //Inverse-gamma
-  mu_beta ~ normal(0, 9);
+  mu_beta ~ normal(0, 3);
   beta ~ multi_normal(mu_beta, quad_form_diag(Omega, tau));
   for (n in 1:N) {
     y[n] ~ normal(X[n] * beta[J_i[n]], sigma);
