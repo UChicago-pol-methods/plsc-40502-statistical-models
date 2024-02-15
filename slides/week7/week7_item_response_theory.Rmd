@@ -164,7 +164,7 @@ $$Pr(Y_{ij} = 1) = F\bigg(\beta_j(\theta_i - \alpha_j)\bigg)$$
 --
 
 - $\beta_j$ captures the extent to which the question reflects the latent trait
-  - $\beta_j$ close to $0$ means that the probability of $Y_{ij} = 1$ is essentially uncorrelated 
+  - $\beta_j$ close to $0$ means that the probability of $Y_{ij} = 1$ is essentially uncorrelated with the latent trait
   - **Negative** $\beta_j$ implies that **low** latent trait values are more likely to answer $Y_{ij} = 1$ (this creates some identifiability issues!)
 
 ---
@@ -273,7 +273,6 @@ $$Pr(Y_{ij} =1 , Y_{ij^{\prime}} = 1 | \theta_i, \beta, \tau) = Pr(Y_{ij} = 1 | 
   - You'll still get **something** but interpreting ideal points in this setting is a bit harder - essentially some of the "closeness" in ideal points could be driven by non-ideological factors.
   
 --
-
 - The "utility maximization" interpretation of the 2PL also implies **single peaked** preferences
   - Legislators strictly prefer policies closer to their ideal point and disprefer ones that are further away
   - But this assumption can be violated if some extreme legislators vote against their party and with the opposition but for differing reasons
@@ -683,3 +682,32 @@ alpha_plot
 
 ---
 
+# Example: Improving Polity
+
+- We can also get a sense of what component indices are most driving the ideal points by plotting $\beta_j$
+
+```{r, warning=F, message=F,  fig.align="center", fig.width=8, fig.height=6,echo=F}
+beta_plot <- bayesplot::mcmc_intervals(polity_irt, pars = vars(contains("beta")), point_size=5, inner_size=4, outer_size = 2) + scale_y_discrete(labels = c("exrec", "exconst", "polcomp")) +  geom_vline(xintercept=0, lty=2, col="black") + theme_bw(base_size = 22)
+beta_plot
+```
+
+---
+
+# Summary
+
+- Like clustering models, Item Response Theory (IRT) models treat the outcome as a function of a **latent variable**
+  - However, in IRT, the **latent variable** is typically continuous rather than a discrete
+--
+
+- As with clustering, imagine a regression model with **unknown regressors**
+  - Our goal is to draw inferences about these regressors under the model structure.
+--
+
+- Inference algorithms leverage the fact that **conditional** on the latent regressors, the model has a familiar structure (e.g. logistic regression)
+  - But note similar identifiability problems as clustering (invariance to rotation/reflection)
+--
+
+- **Careful!** - Results dependent on model structure!
+  - Interpretation of the model parameters is ultimately up to the researchers - no inherent "meaning" to the latent scale.
+
+---
