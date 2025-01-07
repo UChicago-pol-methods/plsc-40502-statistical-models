@@ -1,4 +1,4 @@
-# PLSC 40502: Data Analysis with Statistical Models (Winter 2024)
+# PLSC 40502: Data Analysis with Statistical Models (Winter 2025)
 
 ## Course description
 
