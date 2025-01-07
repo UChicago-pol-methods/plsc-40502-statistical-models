@@ -13,4 +13,4 @@ However, we recommend setting up a Github account and cloning the repository on 
 
 # Readings and assignment submissions
 
-Readings will be posted on the course's Canvas site: https://canvas.uchicago.edu/courses/54700 - You should also submit your assignments and final project there.
+Readings will be posted on the course's Canvas site: https://canvas.uchicago.edu/courses/54700 - You should also submit your assignments and exams there.
