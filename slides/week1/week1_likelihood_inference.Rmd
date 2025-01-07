@@ -18,7 +18,6 @@ $$
   \require{cancel}
   \DeclareMathOperator*{\argmin}{arg\,min}
 $$
-  
 ```{r, echo = F, message=F, warnings=F}
 library(tidyverse)
 library(haven)
@@ -34,9 +33,9 @@ options(digits=3)
 --
 
 - Logistics:
-  - Lectures Th - 2:00pm - 4:50pm;
+  - Lectures Tues/Thurs - 9:30am - 10:50pm;
   - 3 Problem Sets (~ 2 weeks)
-  - Final paper project (8-12 pages)
+  - Midterm/Final Exam (~ 1 week)
   - My office hours: Tuesdays 4pm-6pm (Pick 328)
 --
 
@@ -56,9 +55,8 @@ options(digits=3)
 ---
 
 $$
-  \DeclareMathOperator*{\argmax}{arg\,max}
+ \DeclareMathOperator*{\argmax}{arg\,max}
 $$
-
 # Course workflow 
 
 - .maroon[Lectures]
@@ -74,30 +72,34 @@ $$
 
 # Course workflow
 
-- .maroon[Problem sets] (35% of your grade)
+- .maroon[Problem sets] (25% of your grade)
   - Meant as a check on your understanding of the material and a way of communicating
-  with me about the course.clear
+  with me about the course
   - Collaboration is **strongly encouraged** -- you should ask and answer questions on our Ed discussion board.
-  - Graded hollistically on a plus/check/minus system.
+  - Graded holistically on a plus/check/minus system.
   
 ---
 
 # Course workflow
 
-- .maroon[Final Project] (55% of your grade)
-  - The main goal of this class is for you to develop an independent quantitative research project
-  - The paper should be in the length and style of a research note (8-12 pages)
-    - One well-motivated question + data and analysis (minimize the lit review!)
-  - You can collaborate! (1-3 authors per paper).
-  - See the syllabus for published examples of the style/method of a paper that fits the aims of this class.
-    - Survey data is a great place to ask descriptive questions
-    - But feel free to use other sources or ask different types of questions - just talk to me about it!
+- .maroon[Exams] (65% of your grade)
+  - Exams will be structured like the problem sets with two main differences:
+    - You have about 1 week to complete them instead of 2
+    - You may **not** collaborate with one another on the exams.
 --
 
-- .maroon[Final Project Timeline]
-  - **February 2nd**: 1 page project memo due
-  - **February 29th**: Research presentations in-class (10-15 min. talks + Q&A)
-  - **March 7**: Final paper due
+- .maroon[Participation] (10% of your grade)
+  - It is important that you actively engage with lecture and section -- ask and answer questions.
+  - Do the reading! 
+  - Participating on Ed counts towards this as well.
+--
+
+- .maroon[Assignment Timeline]
+  - **Problem Set 1:** Assigned January 7, Due January 20
+  - **Problem Set 2:** Assigned January 21, Due February 3
+  - **Midterm Exam** Assigned February 4, Due February 10
+  - **Problem Set 3:** Assigned February 18, Due March 3
+  - **Final Exam:** Assigned March 4, Due March 14
 
 ---
 
@@ -148,8 +150,9 @@ $$
 - **Week 8:** Penalized regression and model selection
 --
 
-- **Week 9:** Research presentations + miscellaneous
+- **Week 9:** TBA (possibly semi-parametric inference)
 ---
+
 class: title-slide
 
 # Defining a statistical model
@@ -299,8 +302,12 @@ $$Var(\epsilon | \mathbf{X}) = \begin{bmatrix}
 
 --
 
-- "Robust" standard errors using the "sandwich" estimator - Consistent but not unbiased for the true sampling variance of $\hat{\beta}$
-  - Extensions to allow for forms of correlation in the error terms (e.g. "clustering")
+- "Robust" standard errors using the Eicker-Huber-White "sandwich" estimator - Consistent but not unbiased for the true sampling variance of $\hat{\beta}$
+
+$$\widehat{Var(\hat{\beta})} = (\mathbf{X}^{\prime}\mathbf{X})^{-1} \mathbf{X}^{\prime}\hat{\Sigma}\mathbf{X}(\mathbf{X}^{\prime}\mathbf{X})^{-1}$$ where $\hat{\Sigma}$ is our estimate of the variance-covariance matrix using the squared residuals on the diagonals
+--
+
+- Extensions to "clustered" standard errors that allow arbitrary correlation within groups.
 
 ---
 
@@ -314,8 +321,8 @@ $$\epsilon | \mathbf{X} \sim \mathcal{N}(0, \sigma^2)$$
 - Not necessary even for Gauss-Markov assumptions
 - Not needed to do asymptotic inference on $\hat{\beta}$
   - Why? Central Limit Theorem!
-
 --
+
 - Benefits?
   - Finite-sample inference.
   
