@@ -1,7 +1,7 @@
 ---
 title: 'PLSC 40502: Problem Set 1'
 author: "YOUR NAME"
-date: "January 5, 2024"
+date: "January 8, 2025"
 output:
   pdf_document: default
   html_document:
@@ -16,10 +16,9 @@ library(haven)
 ```
 
 
->This problem set is due at **11:59 pm on Wednesday, January 17th**.
+>This problem set is due at **11:59 pm on Wednesday, January 22nd**.
 
 >Please upload your solutions as a .pdf file saved as "Yourlastname_Yourfirstinitial_pset1.pdf"). In addition, an electronic copy of your .Rmd file (saved as "Yourlastname_Yourfirstinitial_pset1.Rmd") must be submitted to the course website at the same time. We should be able to run your code without error messages. In order to receive credit, homework submissions must be substantially started and all work must be shown.
-
 
 # Problem 1
 
@@ -43,17 +42,15 @@ One way of interpreting the regression parameters is that they are additive on t
 
 $$\log(E[Y_i|X_i]) = X_i^{\prime}\beta$$ 
 
-# Part A
+## Part A
 
 Write down the log-likelihood $\mathcal{\ell}(\beta| \mathbf{X}, \mathbf{Y})$ for the Poisson GLM regression parameters
 
-# Part B
+## Part B
 
-Write an R function that takes as input a vector of coefficients $\beta$, outcome vector $\mathbf{Y}$ and design matrix $\mathbf{X}$ and returns the poisson log-likelihood.
+Write an R function that takes as input a $k$-length vector of coefficients $\beta$, $n$-length outcome vector $\mathbf{Y}$ and $n$ by $k$ design matrix $\mathbf{X}$ and returns the poisson log-likelihood evaluated for each individual observation.
 
-Hint: You can have it return the log-likelihood as a scalar or a vector of the individual log-likelihood for each observation -- the latter will be useful (and works with `maxLik`).
-
-# Part C 
+## Part C 
 
 Using the UCDP data, use your function from Part B and the `maxLik` R package to obtain the MLE for the coefficients of a poisson GLM that regresses the total number of battle deaths in a given conflict-year (using the "best" estimate: `bd_best`) on the year of observation, an indicator for whether the conflict is "interstate", and an indicator for whether the conflict is "internationalized intrastate" (the "left out" group for these dummies is 'intrastate').
 
@@ -61,57 +58,65 @@ Hint: Check the codebook for the `type_of_conflict` variable to find our how to 
 
 Hint: Don't forget the intercept when making your design matrix $\mathbf{X}$
 
-# Part D
+## Part D
 
 Obtain an estimate of the variance-covariance matrix under the assumption that the model is correctly specified. Provide a 95% confidence interval for the coefficient on `year`. Conduct a hypothesis test for the null that the coefficient on `year` equals zero with $\alpha = .05$.
 
 Provide a substantive interpretation of the coefficient on `year` in terms of battle deaths in a conflict-year.
 
-# Part E
+## Part E
 
 What does the model predict will be the expected count of battle deaths for an interstate conflict in the year 2018? Construct a 95% confidence interval for this prediction using the delta method and your variance-covariance matrix from D.
 
 Hint: You may find the `numericGradient()` function from `maxLik` useful for this part. 
 
-# Part F
+## Part F
 
 Compare your prediction from E to the same prediction from a linear regression model using the same variables. Do the two models give meaningfully different results for the CEF?
 
-# Part G
+## Part G
 
-Implement the "robust" Huber sandwich estimator for the variance-covariance matrix of your Poisson regression coefficient (ignore clustering for now, just implement the "heteroskedasticity"-robust version). Compare these standard errors to the conventional MLE standard errors. What does this tell you about the modeling assumptions that you've made in previous parts of this problem?
+Implement the "robust" Huber-White sandwich estimator for the variance-covariance matrix of your Poisson regression coefficient (ignore clustering for now, just implement the "heteroskedasticity"-robust version). Compare these standard errors to the conventional MLE standard errors. What does this tell you about the modeling assumptions that you've made in previous parts of this problem?
 
-Hint: You may find the `gradient()` and `hessian()` functions from `maxLik` useful for this part. 
+Hint: You may find the `estfun()` functions from `maxLik` (and the `sandwich` library) useful for this part. 
 
 # Problem 2
 
-In this problem you will derive a closed form expression for the MLE of the "Normal" regression model. We will focus on the simple case of one regressor and one intercept. Assume the following data-generating process for $n$ observations $\mathbf{Y} = \{Y_1, Y_2, Y_3, \dotsc Y_n\}$:
+Now we'll modify the previous problem and consider a different data-generating process. Another distributional assumption that researchers often make for count variables is to assume that they have a **negative binomial** distribution. This distribution has **two** parameters - one version of the parameterization of this distribution has a mean parameter $\mu_i$ and a non-negative "shape" parameter $\theta$. 
 
-$$Y_i \underset{\text{i.i.d.}}{\sim} \text{Normal}(\beta_0 + \beta_1X_i, \sigma^2)$$
+$$Y_i \underset{\text{i.i.d.}}{\sim} \text{NegBin}(\mu_i, \theta)$$
 
-In other words, each observation $Y_i$ is independent of the others and is assumed to come from a normal distribution with mean $\beta_0 + \beta_1X_i$ and variance $\sigma^2$.
+where
 
-# Part A
+$$\mu_i = \text{exp}(X_i^{\prime}\beta)$$
 
-Write down the probability density function for a single observation $p(y_i | \beta_0, \beta_1, \sigma^2)$
+The probability mass function for the Negative Binomial distribution given parameters $\mu$ and $\theta$ is:
 
-# Part B
+$$f(y; \mu, \theta) = \frac{\Gamma(y + \theta)}{\Gamma(\theta) y!} \times \frac{\mu^y \theta^\theta}{(\mu + \theta)^{(y + \theta)}}$$
 
-Write down the log-likelihood $\ell(\beta_0, \beta_1, \sigma^2| \mathbf{Y})$. Simplify as much as you can and drop any additive constants (this will help in the next part).
+This PMF is implemented in the `pnbinom()` function in base R where $\theta$ is referred to as the `size` parameter and $\mu$ is referred to as `mu`.
 
-# Part C
+## Part A
 
-Find the MLE for $\beta_0$ and $\beta_1$
+Write an R function that takes as input a $k + 1$-length vector of parameters where the first $k$ parameters are the regression coefficients $\beta$ and the last parameter is the shape parameter $\theta$ (or some transformation of it), $n$-length outcome vector $\mathbf{Y}$ and $n$ by $k$ design matrix $\mathbf{X}$ and returns the negative binomial log-likelihood evaluated for each individual observation.
 
-Hint: Express one MLE in terms of the MLE of the other and substitute.
+Hint: You may want to pass a transformed version of $\theta$ in the parameter vector to make optimization easier. By default, most numeric optimizers work best when optimizing over *unconstrained* parameters, but recall that the shape parameter $\theta$ must be non-negative. In other words, your function should apply some transformation to that $k +1$th element of the parameter vector to convert it to $\theta$ before passing it to the (log) PMF.
 
-# Part D
+## Part B
 
-What familiar estimator is the MLE of $\beta_0$ and $\beta_1$. What does this tell you about the bias of the MLE for these parameters?
+Using the UCDP data, use your function from Part B and the `maxLik` R package to obtain the MLE for the coefficients of a negative binomial regression hat regresses the total number of battle deaths in a given conflict-year (using the "best" estimate: `bd_best`) on the year of observation, an indicator for whether the conflict is "interstate", and an indicator for whether the conflict is "internationalized intrastate" (the "left out" group for these dummies is 'intrastate').
 
-# Part E (Optional Bonus!):
+What is your maximum likelihood estimate of the "shape" or "dispersion" parameter $\theta$?
 
-Find the MLE for $\sigma^2$. Is this MLE unbiased?
+## Part C
+
+Obtain an estimate of the variance-covariance matrix under the assumption that the model is correctly specified. Provide a 95% confidence interval for the coefficient on `year`. Conduct a hypothesis test for the null that the coefficient on `year` equals zero with $\alpha = .05$.
+
+Compare this with your estimates from the Poisson regression.
+
+## Part D
+
+Implement the ``robust" Huber-White sandwich estimator for the variance-covariance matrix of your Negative Binomial parameters (again ignore clustering). Compare these standard errors to the conventional MLE standard errors and compare this difference to what you found for the Poisson regression. Comment on what you've found.
 
 # Problem 3
 
@@ -127,18 +132,18 @@ $$P(X_i = x) = \begin{cases} \frac{1}{M} \ &\text{if}\  1 \le x \le M \\
 0 & \text{otherwise}
 \end{cases}$$
 
-# Part A
+## Part A
 
 Write down the likelihood $\mathcal{L}(M | \mathbf{X})$
 
-# Part B
+## Part B
 
 Suppose we observe 5 observations: $\mathbf{X} = \{10, 30, 78, 293, 43\}$. Make a graph of the likelihood function.
 
-# Part C
+## Part C
 
 Find the MLE of $M$, $\hat{M}$.
 
-# Part D
+## Part D
 
 Is the MLE unbiased? Is the MLE consistent? Explain why or why not.
