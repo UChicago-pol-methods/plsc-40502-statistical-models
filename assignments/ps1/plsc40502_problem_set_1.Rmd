@@ -94,7 +94,7 @@ The probability mass function for the Negative Binomial distribution given param
 
 $$f(y; \mu, \theta) = \frac{\Gamma(y + \theta)}{\Gamma(\theta) y!} \times \frac{\mu^y \theta^\theta}{(\mu + \theta)^{(y + \theta)}}$$
 
-This PMF is implemented in the `pnbinom()` function in base R where $\theta$ is referred to as the `size` parameter and $\mu$ is referred to as `mu`.
+This PMF is implemented in the `dnbinom()` function in base R where $\theta$ is referred to as the `size` parameter and $\mu$ is referred to as `mu`.
 
 ## Part A
 
