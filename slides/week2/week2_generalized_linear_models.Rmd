@@ -124,7 +124,6 @@ where $h(y)$, $A(\theta)$, $\eta(\theta)$ and $T(y)$ are known functions
 --
 - The key intuition: exponential distributions factorize in a convenient way
   - if $b(\theta) = \theta$, then the distribution is in "canonical" form
-  - $T(y)$ is a "sufficient statistic"
 
 ---
 
@@ -277,12 +276,98 @@ $$\hat{\beta}^{(t+1)} =  \hat{\beta}^{(t)} - \mathbf{H}^{-1}(\hat{\beta}^{(t)}) 
 
 - Recall that the negative inverse hessian is also the **Observed Fisher Information** 
   - An alternative algorithm, **Fisher Scoring** substitutes this for the expected Fisher Information
-  - Often these update steps can be expressed as solutions to a **weighted least squares** optimization problem
 --
 
 - All of these and more are implemented in the `maxLik` R package, which we will be using this week.
   - Generally more "current" than `optim()` and includes some convenience functions.
   
+
+---
+
+# Deriving a logit likelihood
+
+- From our logit link function, we have
+
+$$\log\left(\frac{\pi}{1-\pi}\right) = X_i^{\prime}\beta $$
+
+and 
+
+$$1 - \pi_i = 1 -  \frac{1}{1 + \exp(-X_i^{\prime}\beta)} = \frac{\exp(-X_i^{\prime}\beta)}{1 + \exp(-X_i^{\prime}\beta)} = \frac{1}{1 + \exp(X_i^{\prime}\beta)} $$
+
+
+- Let's write the log-likelihood:
+
+$$\ell(\beta | \mathbf{y}, \mathbf{X}) = \sum_{i=1}^Ny_i X_i^{\prime}\beta + \log\bigg(\frac{1}{1 + \exp(X_i^{\prime}\beta)}\bigg)$$
+$$\ell(\beta | \mathbf{y}, \mathbf{X}) = \sum_{i=1}^Ny_i X_i^{\prime}\beta - \log\bigg(1 + \exp(X_i^{\prime}\beta)\bigg)$$
+---
+
+# Iteratively reweighted least squares
+
+- For GLMs with the canonical link, the Newton-Raphson updates can be written as a series of solutions to a *weighted least squares* problem.
+- Take our likelihood:
+
+$$\ell(\mathbf{Y} | \mathbf{X}, \beta) = \sum_{i=1}^n y_iX_i^\prime\beta - \log\bigg(1 + \exp(X_i^\prime\beta)\bigg)$$
+--
+
+- Take the first order derivative w.r.t $\beta$ to get the score (remember, we typically let $X_{i0} = 1$ be the intercept)
+
+$$S(\beta) =  \begin{bmatrix}  \sum_{i=1}^n y_i - \frac{\exp(X_i^\prime \beta)}{1 + \exp(X_i^\prime \beta)} \\
+ \sum_{i=1}^n y_iX_{i1} -  X_{i1}\frac{\exp(X_i^\prime \beta)}{1 + \exp(X_i^\prime \beta)} \\
+\vdots \\
+\sum_{i=1}^n y_iX_{ik} - X_{ik}\frac{\exp(X_i^\prime \beta)}{1 + \exp(X_i^\prime \beta)} \end{bmatrix}$$
+
+---
+
+# Iteratively reweighted least squares
+
+- Writing this in matrix form and substituting our definition of $\pi_i = \frac{\exp(X_i^\prime \beta)}{1 + \exp(X_i^\prime \beta)}$
+
+$$S(\beta) = \sum_{i=1}^n X_i(y_i - \pi_i) = \mathbf{X}^\prime (y - \pi)$$
+
+---
+
+# Iteratively reweighted least squares
+
+- Differentiating the score again to get the Hessian
+  - First, the diagonal terms:
+
+$$\frac{\partial^2}{\partial \beta_k^2}\ell(\mathbf{Y} | \mathbf{X}, \beta) = - \sum_{i=1}^n X_{ik} \bigg(X_{ik} \frac{\exp(X_i^\prime \beta)}{1 + \exp(X_i^\prime\beta)} - X_{ik} \frac{\exp(X_i^\prime \beta)^2}{(1 + \exp(X_i^\prime\beta))^2 }\bigg)$$
+
+--
+
+- Factoring and substituting in $\pi$ again
+
+$$\frac{\partial^2}{\partial \beta_k^2}\ell(\mathbf{Y} | \mathbf{X}, \beta) = -\sum_{i=1}^n X_{ik}^2(\pi_i - \pi_i^2) = -\sum_{i=1}^n X_{ik}^2\bigg[\pi_i(1 - \pi_i)\bigg]$$
+
+--
+
+- The off-diagonal terms also have this $\pi(1-\pi)$ component:
+
+$$\frac{\partial^2}{\partial \beta_k \partial \beta_j}\ell(\mathbf{Y} | \mathbf{X}, \beta) =  -\sum_{i=1}^n X_{ik}X_{ij}\bigg[\pi_i(1 - \pi_i)\bigg]$$
+
+---
+
+# Iteratively reweighted least squares
+
+- In matrix form, our Hessian is 
+
+$$\mathbf{H}(\beta) = -\mathbf{X}^\prime\mathbf{W}\mathbf{X}$$
+where $\mathbf{W}$ is an $n \times n$ diagonal matrix with elements $\pi_i(1-\pi_i)$
+
+--
+
+- Plugging these two components into our Newton-Raphson update formula
+
+$$\hat{\beta}^{(t+1)} =  \hat{\beta}^{(t)} - \mathbf{H}^{-1}(\hat{\beta}^{(t)}) S(\hat{\beta}^{(t)})$$
+$$\hat{\beta}^{(t+1)} =  \hat{\beta}^{(t)}  + (\mathbf{X}^\prime\mathbf{W}\mathbf{X})^{-1}\mathbf{X}^\prime (y - \pi^{(t)})$$
+where the elements of $\mathbf{W}$ are evaluated at $\pi^{(t)}$ (the "predicted probabilities" at step $t$).
+
+--
+
+- Re-arranging yields an update step that has the form of a weighted least squares regression with an augmented outcome based on the "current" parameters $\hat{\beta}^{(t)}$ and $\pi^{(t)}$
+
+$$\hat{\beta}^{(t+1)} =  (\mathbf{X}^\prime\mathbf{W}\mathbf{X})^{-1}\mathbf{X}^\prime \mathbf{W}\bigg(\mathbf{X}\hat{\beta}^{(t)} + \mathbf{W}^{-1}(y - \pi^{(t)})\bigg)$$
+
 ---
 
 # Example: Propensity Scores
@@ -324,29 +409,12 @@ n_obs <- nrow(X_mat)
 n_obs
 ```
 
----
-
-# Example: Propensity Scores
-
-- From our logit link function, we have
-
-$$\log\left(\frac{\pi}{1-\pi}\right) = X_i^{\prime}\beta $$
-
-and 
-
-$$1 - \pi_i = 1 -  \frac{1}{1 + \exp(-X_i^{\prime}\beta)} = \frac{\exp(-X_i^{\prime}\beta)}{1 + \exp(-X_i^{\prime}\beta)} = \frac{1}{1 + \exp(X_i^{\prime}\beta)} $$
-
-
-- Let's write the log-likelihood:
-
-$$\ell(\beta | \mathbf{y}, \mathbf{X}) = \sum_{i=1}^Ny_i X_i^{\prime}\beta + \log\bigg(\frac{1}{1 + \exp(X_i^{\prime}\beta)}\bigg)$$
-$$\ell(\beta | \mathbf{y}, \mathbf{X}) = \sum_{i=1}^Ny_i X_i^{\prime}\beta - \log\bigg(1 + \exp(X_i^{\prime}\beta)\bigg)$$
 
 ---
 
 # Example: Propensity Scores
 
-- And let's put the log-likelihood into code (this returns a vector of the log-likelihood for each observation)
+- Put the log-likelihood into code (this returns a vector of the log-likelihood for each observation)
 
 ```{r, warning = F, message = F}
 logit_loglik <- function(beta, Y, X){
