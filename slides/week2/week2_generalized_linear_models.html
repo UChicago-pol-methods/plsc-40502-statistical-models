@@ -707,7 +707,7 @@ where the elements of `\(\mathbf{W}\)` are evaluated at `\(\pi^{(t)}\)` (the &qu
 - Let&#39;s estimate a logistic propensity score model for treatment in the .maroon[Keriakes et. al. (2000)] dataset
 
 
-``` r
+```r
 # Read in the dataset
 pci &lt;- read_csv(&quot;data/pci.csv&quot;)
 ```
@@ -730,7 +730,7 @@ pci &lt;- read_csv(&quot;data/pci.csv&quot;)
 - Make the design matrix `\(\mathbf{X}\)`
 
 
-``` r
+```r
 X_mat &lt;- model.matrix(abcix ~ stent + height + female + diabetic + acutemi + ejecfrac + ves1proc, data=pci)
 head(X_mat) # View the top of the matrix
 ```
@@ -749,7 +749,7 @@ head(X_mat) # View the top of the matrix
 - Sample size
 
 
-``` r
+```r
 n_obs &lt;- nrow(X_mat)
 n_obs
 ```
@@ -766,7 +766,7 @@ n_obs
 - Put the log-likelihood into code (this returns a vector of the log-likelihood for each observation)
 
 
-``` r
+```r
 logit_loglik &lt;- function(beta, Y, X){
   eta &lt;- X%*%beta # linear predictor
   lik &lt;- Y*eta - log(1+exp(eta))
@@ -779,7 +779,7 @@ logit_loglik &lt;- function(beta, Y, X){
 - Now let&#39;s optimize it to get the MLE
 
 
-``` r
+```r
 library(maxLik) # Maximum Likelihood library
 
 logit_mle &lt;- maxLik(logit_loglik, 
@@ -795,7 +795,7 @@ logit_mle &lt;- maxLik(logit_loglik,
 
 - What did we get?
 
-``` r
+```r
 est &lt;- coef(logit_mle) # Our optimization routine
 names(est) &lt;- colnames(X_mat)
 est
@@ -808,7 +808,7 @@ est
 ##     -0.0148      0.7605
 ```
 
-``` r
+```r
 # Compare to built-in R routine?
 logit_Rglm &lt;- glm(abcix ~ stent + height + female + diabetic + acutemi + ejecfrac + ves1proc, 
                   data=pci, family=binomial(link=&quot;logit&quot;))
@@ -829,14 +829,14 @@ coef(logit_Rglm)
 - Let&#39;s obtain our (asymptotic) variance-covariance matrix
 
 
-``` r
+```r
 logit_vcov &lt;- solve(-hessian(logit_mle))
 ```
 
 - Square root of the diagonal is our SEs
 
 
-``` r
+```r
 logit_SEs &lt;- sqrt(diag(logit_vcov))
 ```
 
@@ -848,7 +848,7 @@ logit_SEs &lt;- sqrt(diag(logit_vcov))
 - Let&#39;s get our t-statistics and p-values
 
 
-``` r
+```r
 results &lt;- rbind(coef(logit_mle), logit_SEs, 
                      coef(logit_mle)/logit_SEs, 
                      2*pnorm(-abs(coef(logit_mle)/logit_SEs)))
@@ -972,7 +972,7 @@ results
 - Let&#39;s determine the propensity of receiving treatment for a patient at the median covariate values 
 
 
-``` r
+```r
 X_medians &lt;- apply(X_mat, 2, median)
 X_medians
 ```
@@ -988,7 +988,7 @@ X_medians
 - Construct our prediction function
 
 
-``` r
+```r
 pred_prob &lt;- function(beta, X){
   return(1/(1 + exp(-X%*%beta)))
 }
@@ -1008,7 +1008,7 @@ pred_median
 - We could solve for the gradient in terms of `\(\beta\)` analytically, but there are plenty of convenient functions that will do this numerically
 
 
-``` r
+```r
 pred_prob_gradient &lt;- numericGradient(pred_prob, 
                                       t0 = coef(logit_mle),
                                       X = X_medians)
@@ -1019,7 +1019,7 @@ pred_prob_gradient &lt;- numericGradient(pred_prob,
 - Applying the delta method
 
 
-``` r
+```r
 pred_prob_var &lt;- pred_prob_gradient%*%logit_vcov%*%t(pred_prob_gradient) # R treats vectors as row-vectors not column vectors
 ```
 
@@ -1028,7 +1028,7 @@ pred_prob_var &lt;- pred_prob_gradient%*%logit_vcov%*%t(pred_prob_gradient) # R 
 - Making our 95% asymptotic CI for `\(\hat{\pi}(X)\)`
 
 
-``` r
+```r
 c(pred_median - abs(qnorm(.025))*sqrt(pred_prob_var),
   pred_median + abs(qnorm(.025))*sqrt(pred_prob_var))
 ```
@@ -1062,7 +1062,7 @@ c(pred_median - abs(qnorm(.025))*sqrt(pred_prob_var),
 - Let&#39;s try it:
 
 
-``` r
+```r
 set.seed(60637)
 sim_betas &lt;- MASS::mvrnorm(n=1e5, mu = coef(logit_mle), Sigma = logit_vcov)
 sim_pi &lt;- apply(sim_betas, 1, function(x) pred_prob(x, X=X_medians))
@@ -1073,7 +1073,7 @@ sim_pi &lt;- apply(sim_betas, 1, function(x) pred_prob(x, X=X_medians))
 - How close are we?
 
 
-``` r
+```r
 c(pred_median - abs(qnorm(.025))*sd(sim_pi),
   pred_median + abs(qnorm(.025))*sd(sim_pi))
 ```
@@ -1369,6 +1369,8 @@ class: title-slide
 - `\(Var(\epsilon)\)` is the variance-covariance matrix of the errors.
   - Since the errors are mean zero, it&#39;s the expectation of the outer-product of the errors `\(Var(\epsilon) = E[\epsilon\epsilon^{\prime}]\)`
   - Under our Gauss-Markov assumptions (specifically, independence and homoskedasticity), `\(Var(\epsilon) = \sigma^2\mathbf{I}\)`. And so
+  
+`$$Var(\hat{\beta}) = \sigma^2(\mathbf{X}^{\prime} \mathbf{X})^{-1}$$`
 
 ---
 
@@ -1385,7 +1387,7 @@ class: title-slide
 - Let&#39;s go back to our propensity score logistic regression of abciximab treatment on the predictive covariates
 
 
-``` r
+```r
 library(sandwich) # this contains &quot;estfun()&quot;
 
 logit_sandwich &lt;- solve(-hessian(logit_mle))%*%(t(estfun(logit_mle))%*%estfun(logit_mle))%*%solve(-hessian(logit_mle))
@@ -1394,7 +1396,7 @@ logit_sandwich &lt;- solve(-hessian(logit_mle))%*%(t(estfun(logit_mle))%*%estfun
 - Compare the robust SEs to the ones we had earlier
 
 
-``` r
+```r
 # Non-robust
 logit_SEs
 ```
@@ -1403,7 +1405,7 @@ logit_SEs
 ## [1] 2.28201 0.15051 0.01242 0.23683 0.17075 0.27166 0.00751 0.13874
 ```
 
-``` r
+```r
 # Robust
 logit_sandwich_SEs &lt;- sqrt(diag(logit_sandwich))
 logit_sandwich_SEs
@@ -1420,7 +1422,7 @@ logit_sandwich_SEs
 - These are also implemented in the `sandwich` package which operates on a lot of common MLE packages in R
 
 
-``` r
+```r
 logit_sandwich_vcov &lt;- sandwich::sandwich(logit_mle)
 sqrt(diag(logit_sandwich_vcov))
 ```
@@ -1429,7 +1431,7 @@ sqrt(diag(logit_sandwich_vcov))
 ## [1] 3.22525 0.14992 0.01736 0.29404 0.16964 0.26910 0.00773 0.14285
 ```
 
-``` r
+```r
 logit_sandwich_SEs
 ```
 
@@ -1482,7 +1484,7 @@ for (i in 1:nIter){
 - Compare our bootstrap variance-covariance matrix to the sandwich estimator
 
 
-``` r
+```r
 # Sandwich
 logit_sandwich_SEs
 ```
@@ -1491,7 +1493,7 @@ logit_sandwich_SEs
 ## [1] 3.22525 0.14992 0.01736 0.29404 0.16964 0.26910 0.00773 0.14285
 ```
 
-``` r
+```r
 # Bootstrap
 boot_SEs &lt;- sqrt(diag(var(beta_boot)))
 boot_SEs
@@ -1602,7 +1604,7 @@ class: title-slide
 - Let&#39;s look at a sample dataset from the `survival` R package on survival times for patients with advanced lung cancer.
 
 
-``` r
+```r
 library(survival)
 data(cancer, package=&quot;survival&quot;)
 as_tibble(lung)
@@ -1636,7 +1638,7 @@ as_tibble(lung)
 - In the `survival` package, we need to define a &quot;survival&quot; outcome in terms of the event time and the censoring indicator
 
 
-``` r
+```r
 surv_model &lt;- survfit(Surv(time, status) ~ 1, data=lung)
 ```
 
@@ -1647,7 +1649,7 @@ surv_model &lt;- survfit(Surv(time, status) ~ 1, data=lung)
 - Plot the curve for the sample as a whole
 
 
-``` r
+```r
 plot(surv_model, xlab=&quot;Survival Time&quot;, conf.int=T, ylab=&quot;Survival Rate&quot;, mark.time=TRUE)
 ```
 
@@ -1660,7 +1662,7 @@ plot(surv_model, xlab=&quot;Survival Time&quot;, conf.int=T, ylab=&quot;Survival
 - Now let&#39;s do this for gender
 
 
-``` r
+```r
 surv_model_sex &lt;- survfit(Surv(time, status) ~ I(sex==2), data=lung)
 ```
 
@@ -1671,7 +1673,7 @@ surv_model_sex &lt;- survfit(Surv(time, status) ~ I(sex==2), data=lung)
 - Plot separate curves for men and women
 
 
-``` r
+```r
 plot(surv_model_sex, col=c(&quot;indianred&quot;, &quot;dodgerblue&quot;), xlab=&quot;Survival Time&quot;, conf.int=T, ylab=&quot;Survival Rate&quot;, mark.time=T)
 legend(750, .9, c(&quot;Male&quot;, &quot;Female&quot;), col=c(&quot;indianred&quot;, &quot;dodgerblue&quot;), lwd=2, bty=&#39;n&#39;)
 ```
@@ -1750,14 +1752,14 @@ legend(750, .9, c(&quot;Male&quot;, &quot;Female&quot;), col=c(&quot;indianred&q
 - Let&#39;s compare our parametric fit to the non-parametric Kaplan-Meier estimates
  
 
-``` r
+```r
 exp_model_sex &lt;- survreg(Surv(time, status) ~ I(sex==2), dist=&quot;exponential&quot;, data=lung) # sex = 2 is a dummy variable for female
 ```
 
 - Get the survival curves for men and women
 
 
-``` r
+```r
 exp_surv_men &lt;- function(x) pexp(x, rate = 1/exp(coef(exp_model_sex)%*%c(1,0)), lower.tail = F)
 exp_surv_women &lt;- function(x) pexp(x, rate = 1/exp(coef(exp_model_sex)%*%c(1,1)), lower.tail=F)
 ```
@@ -1769,7 +1771,7 @@ exp_surv_women &lt;- function(x) pexp(x, rate = 1/exp(coef(exp_model_sex)%*%c(1,
 - Overlay the exponential survival curves on the Kaplan-Meier estimates
 
 
-``` r
+```r
 plot(surv_model_sex, col=c(&quot;indianred&quot;, &quot;dodgerblue&quot;), xlab=&quot;Survival Time&quot;, conf.int=T, ylab=&quot;Survival Rate&quot;, mark.time=T)
 legend(750, .9, c(&quot;Male&quot;, &quot;Female&quot;), col=c(&quot;indianred&quot;, &quot;dodgerblue&quot;), lwd=2, bty=&#39;n&#39;)
 curve(exp_surv_men, from = 0, to = 1000, lwd=2, col=&quot;indianred&quot;, add=T)
@@ -1839,7 +1841,7 @@ curve(exp_surv_women, from = 0, to = 1000, lwd=2, col=&quot;dodgerblue&quot;, ad
 - What does the Cox fit look like
 
 
-``` r
+```r
 cox_model_sex &lt;- coxph(Surv(time, status) ~ I(sex==2), data=lung) # sex = 2 is a dummy variable for female
 print(cox_model_sex)
 ```
@@ -1865,7 +1867,7 @@ print(cox_model_sex)
 - Calculate the baseline hazard via Kaplan-Meier and overlay the Cox predicted hazards for men and women
 
 
-``` r
+```r
 plot(survfit(cox_model_sex, newdata = data.frame(sex=c(1,2))), col=c(&quot;indianred&quot;, &quot;dodgerblue&quot;), xlab=&quot;Survival Time&quot;, conf.int=T, ylab=&quot;Survival Rate&quot;, mark.time=T)
 ```
 
