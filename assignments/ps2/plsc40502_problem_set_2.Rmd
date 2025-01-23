@@ -1,7 +1,7 @@
 ---
 title: 'PLSC 40502: Problem Set 2'
 author: "YOUR NAME"
-date: "January 19, 2024"
+date: "January 22, 2025"
 output:
   pdf_document: default
   html_document:
@@ -17,52 +17,47 @@ options(digits=3)
 ```
 
 
->This problem set is due at **11:59 pm on Wednesday, January 31st**.
+>This problem set is due at **11:59 pm on Wednesday, February 5th**.
 
->Please upload your solutions as a .pdf file saved as "Yourlastname_Yourfirstinitial_pset2.pdf"). In addition, an electronic copy of your .Rmd file (saved as "Yourlastname_Yourfirstinitial_pset2.Rmd") must be submitted to the course website at the same time. We should be able to run your code without error messages. In addition to your solutions, please submit an annotated version of this `.rmd` file saved as "Yourlastname_Yourfirstinitial_pset2_feedback.rmd", noting the problems where you needed to consult the solutions and why along with any remaining questions or concerns about the material. In order to receive credit, homework submissions must be substantially started and all work must be shown.
-
+>Please upload your solutions as a .pdf file saved as "Yourlastname_Yourfirstinitial_pset2.pdf"). In addition, an electronic copy of your .Rmd file (saved as "Yourlastname_Yourfirstinitial_pset2.Rmd") must be submitted to the course website at the same time. We should be able to run your code without error messages. 
 
 # Problem 1
 
-The **Congressional Election Study** is an annual, large, nationally representative survey of the American population designed to understand how Americans view their representatives. We will be using this dataset to predict the level of support for U.S. trade policy, particularly the Section 232 Steel and Aluminum tariffs implemented by the Trump administration and currently in place under the Biden administration.
+This problem will have you implementing a Bayesian version of the classic probit regression model. The dataset comes from Barilleaux and Rainey (2014) which studies the decisions of U.S. state governors to accept or reject the Affordable Care Act's Medicaid expansion. The full citation is:
 
-You will find the `CCES Guide 2020.pdf` very useful for understanding the definition and structure of different variables (see after page 27, the "common content") and this problem will assume that you are able to use this reference to identify relevant outcomes and covariates. Note that the numeric values in the CSV dataset below correspond in order to the categories listed in the PDF. For example, the Guide lists two responses for `gender`: Male and Female. Therefore, "Male" is coded as a 1 and Female is coded as a "2"
+> Barrilleaux, Charles, and Carlisle Rainey. "The politics of need: Examining governors’ decisions to oppose the “Obamacare” Medicaid expansion." State Politics & Policy Quarterly 14, no. 4 (2014): 437-460.
 
-Be very careful in reading the variable names and definitions!
-
-The code below will load in the Common Content from the 2020 CES. Please download the file directly from `https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi%3A10.7910/DVN/E9N6PH` and place it into your data folder:
+The code below will load in the dataset
 
 ```{r, warning = F, message = F}
-ces <- read_csv("data/CES20_Common_OUTPUT_vv.csv")
+aca <- read_csv("data/politics_and_need.csv")
 ```
-
-Our main outcome of interest is `CC20_338b`, whether the respondent supports a policy of "25% tariffs on imported steel and 10% on imported aluminum, EXCEPT from Canada and Mexico." (1 = Yes, 2 = No)
-
-We'll be predicting this using data on age, sex, race, education and income. Start by cleaning the data and setting up the preliminaries
 
 ## Part A
 
-We'll need to coarsen our covariates into a higher level of aggregation since some bins are very, very small. Specifically, we want to match the bins for sex, race, age, education and income used to generate the national vote breakdown in the CCES Guide (pages 25/26). Using the definitions given by those bins, and the following variables, generate a factor variable for gender, race, age and education (you should have four factor variables in total):
+We will need to first construct our outcome and covariates of interest. Create a binary indicator variable, `gov_opposes`, for whether a state's governor **opposes** medicaid expansion by transforming the `gov_position` variable. Your predictors/regressors will be:
 
-- `birthyr` Year of birth (also remember that this survey was conducted in 2020)
-- `gender` - Gender of respondent (1 = Male, 2 = Female)
-- `race` - "What racial or ethnic group best describes you?"
-- `hispanic` - "Are you of Spanish, Latino, or Hispanic origin or descent?" (Note for the 'hispanic' category in the 5-category race variable, you should code respondents who answer yes to this question *or* "hispanic" to `race`)
-- `educ` - "What is the highest level of education you have completed?"
+- `gop_governor` - An indicator for whether the governor is a Republican (transform from `gov_party`)
+- `percent_favorable_aca` - Percent of residents favorable to the ACA
+- `gop_legislature` - An indicator for whether both houses of the state legislature are controlled by the Republican party (transform from `sen_party` and `house_party`)
+- `percent_uninsured` - Percentage of residents who are uninsured.
+- `bal2012` - Fiscal health (state year end reserves as a share of total spending)
+- `multiplier` - State medicaid multiplier
+- `percent_nonwhite` - Percentage of residents who are non-white (transform from `percent_white`)
+- `percent_metropolitan` - Percentage of residents who live in metropolitan areas
 
-You can validate that your coarsenings are correct using the "% of electorate" column in the national vote breakdown from pages 25/26 of the CCES Guide. Subset the data to respondents without missing `vvweight_post` (matched to voter file + filled out both waves) and without missing `CL_2020gvm` and take weighted averages using the sampling weights.
+Some of the above variables do not exist in the data frame. Generate them by transforming the relevant character variables into binary indicators.
 
-Generate a dataset that contains an indicator variable for whether the respondent supports the tariff `CC20_338b == 1` along with your four predictors and remove all missing data. Set the baselines for gender to male, age to "18-29", race to White and education to "High school or less".
+Rescale each of the continuous regressors so that it has mean zero and standard deviation $.5$ (de-mean each variable and divide it by 2 times its sample standard deviation). Rescale each binary regressor so that it is mean zero.
 
-To check your work, your final dataset should contain `60398` observations.
 
 ## Part B
 
-Next, let's write down a model. We'll assume that the data-generating process for the indicator $Y_i \in \{0, 1\}$ of whether the respondent supports the tariffs has the following DGP:
+Next, let's write down a model. We'll assume that the data-generating process for the indicator $Y_i \in \{0, 1\}$ of whether the governor rejects ACA Medicaid expansion has the following DGP:
 
-$$Y_i = \mathbb{1}(Y_i^* > 0)$$
+$$Y_i = \mathbf{1}(Y_i^* > 0)$$
 
-where $\mathbb{1}()$ denotes the indicator function. That is, when $Y_i^*$ is greater than $0$, $Y_i = 1$ and when $Y_i^*$ is less than or equal to $0$, $Y_i = 0$.
+where $\mathbf{1}()$ denotes the indicator function. That is, when $Y_i^*$ is greater than $0$, $Y_i = 1$ and when $Y_i^*$ is less than or equal to $0$, $Y_i = 0$.
 
 $$Y_i^* \sim \text{Normal}(X_i^{\prime}\beta, 1)$$
 and 
@@ -102,9 +97,9 @@ Hint 2: Once we've gotten rid of that variable, what familiar posterior distribu
 
 ## Part F
 
-Let's estimate the probit model to predict the probability of supporting the tariff conditional on age, sex, race and education level. For now, include the covariates additively, omitting any interactions (e.g. education-race). Use `model.matrix()` to generate the regression matrix $\mathbf{X}$.
+Let's estimate the probit model to predict the probability of rejecting medicaid spending conditional on the covariates from Part A. Include the covariates additively, omitting any interactions. Use `model.matrix()` to generate the regression matrix $\mathbf{X}$.
 
-Implement a Gibbs sampler to obtain draws from the joint posterior distribution. Use a fairly diffuse prior for $\beta$ that sets $b_0 = 0$ and $B_0 = \frac{1}{10} \mathbf{I}$ where $\mathbf{I}$ is the identity matrix.
+Implement a Gibbs sampler to obtain draws from the joint posterior distribution. Use a fairly diffuse prior for $\beta$ that sets $b_0 = 0$ and $B_0 = \frac{1}{9} \mathbf{I}$ where $\mathbf{I}$ is the identity matrix.
 
 Pick some reasonable starting values for $\beta$ and start by sampling from the conditional distribution of $Y_i^*$ to generate "starting" values of $Y_i^*$. Iterate between sampling from the conditional distribution of $\beta$ and the conditional distribution of the $Y_i^*$. You only need to store all of the samples from $\beta$ (this should save on memory as you do not need to store all 2000 iterations of the $\approx 60,000$ draws from  $Y_i^*$).
 
@@ -125,15 +120,11 @@ Make some traceplots of your coefficients - does it look like the Gibbs Sampling
 
 ## Part G
 
-Plot the posterior distribution of the coefficient on "College Graduate". Obtain a posterior mean estimate along with a 95% credible interval. Interpret your results substantively.
-
-## Part H
-
-Carry out a posterior predictive check. For each observation in the data, predict $\tilde{Y}_i$ given $\beta$ across all of the sampled values of $\beta$ (derive the probability that $Y_i = 1$ given the coefficients and the functional form and simulate from the bernoulli distribution). How well does the model predict the outcomes on average?
+Plot the posterior distribution of the coefficient on "GOP Governor". Obtain a posterior mean estimate along with a 95% credible interval. Interpret your results substantively. Compare the results to the estimates from a conventional GLM estimated via MLE (use the `glm` package to fit a probit regression). Why do we need to use a Bayesian approach for this particular regression setting?
 
 ## Part I
 
-Implement the model above in Stan without the data augmentation step (define $y$ conventionally using the normal CDF `Phi`). Compare your results to your gibbs sampler. Do they line up?
+Now implement the model above in Stan without the data augmentation step (define $y$ conventionally using the normal CDF `Phi`). Instead of using a normal prior on the coefficients, use a Cauchy prior with center parameter 0 and scale parameter 2.5. Obtain the posterior mean and 95% credible interval for the coefficient on "GOP Governor" and compare the results to your analysis above. How does changing the prior change the results?
 
 
 
