@@ -159,15 +159,58 @@ $$f(\beta | \mathbf{Y}, \sigma^2) \propto \bigg[\prod_{i=1}^N \underbrace{f(Y_i 
   
 ---
 
-# Aside: Conditional distributions
+# Normal-normal conjugacy
 
-- From normal regression theory, we can derive the mean and variance of that posterior distribution
+- To illustrate why the normal is conjugate to the normal, let's plug in the densities and drop multiplicative constants
+
+$$f(\beta | \mathbf{Y}, \sigma^2) \propto \bigg[\prod_{i=1}^N \exp\bigg(-\frac{(Y_i - X_i^\prime \beta)^2}{2\sigma^2}\bigg)\bigg]\times \exp\bigg(-\frac{1}{2}(\beta - b_0)^{\prime}B_0(\beta - b_0)\bigg)$$
+--
+
+- Using properties of the products of exponentials
+
+$$f(\beta | \mathbf{Y}, \sigma^2) \propto \exp\bigg(-\frac{\sum_{i=1}^n(Y_i - X_i^\prime \beta)^2}{2\sigma^2}\bigg)\times \exp\bigg(-\frac{1}{2}(\beta - b_0)^\prime B_0(\beta - b_0)\bigg)$$
+
+--
+
+- We can write the first term as a quadratic form where $\Sigma$ is a matrix with diagonal terms $\sigma^2$
+
+$$f(\beta | \mathbf{Y}, \sigma^2) \propto \exp\bigg(-\frac{1}{2}(\mathbf{Y} - X\beta)^\prime \Sigma^{-1}(\mathbf{Y} - X\beta)\bigg)\times \exp\bigg(-\frac{1}{2}(\beta - b_0)^\prime B_0(\beta - b_0)\bigg)$$
+
+---
+
+# Normal-normal conjugacy
+
+- We want to write the likelihood as a density in $\beta$. Expand the quadratic form, drop terms that only contain $Y$ and use the fact that $\Sigma^{-1}$ is symmetric.
+
+$$f(\beta | \mathbf{Y}, \sigma^2) \propto \exp\bigg(-\frac{1}{2}\bigg[\beta^\prime \mathbf{X}^\prime \Sigma^{-1} \mathbf{X}\beta + 2\mathbf{Y}^\prime \Sigma^{-1} \mathbf{X}\beta\bigg]\bigg)\times \exp\bigg(-\frac{1}{2}(\beta - b_0)^\prime B_0(\beta - b_0)\bigg)$$
+
+--
+
+- Since $\Sigma^{-1}$ is a diagonal matrix and using the properties of transposes, we can write the above as:
+
+$$f(\beta | \mathbf{Y}, \sigma^2) \propto \exp\bigg(-\frac{1}{2\sigma^2}\bigg[\beta^\prime \mathbf{X}^\prime \mathbf{X}\beta + 2\beta^\prime \mathbf{X}^\prime \mathbf{Y} \bigg]\bigg)\times \exp\bigg(-\frac{1}{2}(\beta - b_0)^\prime B_0(\beta - b_0)\bigg)$$
+
+--
+
+- A well known result (completing the square) allows us to factor that expression into a familiar quadratic form with $\beta$ and a term that again drops out as a constant (depends only on $\mathbf{X}$ and $\mathbf{Y}$)
+
+$$f(\beta | \mathbf{Y}, \sigma^2) \propto \exp\bigg(-\frac{1}{2\sigma^2}[\beta - (\mathbf{X}^\prime\mathbf{X})^{-1}(\mathbf{X}^\prime\mathbf{Y})]^\prime(\mathbf{X}^\prime\mathbf{X})[\beta - (\mathbf{X}^\prime\mathbf{X})^{-1}(\mathbf{X}^\prime\mathbf{Y})]\bigg)\times \exp\bigg(-\frac{1}{2}(\beta - b_0)^\prime B_0(\beta - b_0)\bigg)$$
+
+---
+
+# Normal-normal conjugacy
+
+- Now we can combine likelihood and prior using the properties of the sums of quadratic forms (and again dropping constants of proportionality).
+
+$$f(\beta | \mathbf{Y}, \sigma^2) \propto \exp\bigg(-\frac{1}{2\sigma^2}[\beta - (\mathbf{X}^\prime\mathbf{X} + B_0)^{-1}(B_0b_0 + \mathbf{X}^\prime\mathbf{Y} )]^\prime(\mathbf{X}^\prime\mathbf{X} + B_0)[\beta - (\mathbf{X}^\prime\mathbf{X} + B_0)^{-1}(B_0b_0 + \mathbf{X}^\prime\mathbf{Y})]\bigg)$$
+
+--
+
+- Inspecting this kernel, we can recognize the posterior mean and posterior variance-covariance matrix.
 - **Variance-Covariance matrix**
 
 $$V = \sigma^2(B_0 + \mathbf{X}^{\prime}\mathbf{X})^{-1}$$
---
-
-- And **Mean**
+- and **Mean**
 
 $$\mu = (B_0 + \mathbf{X}^{\prime}\mathbf{X})^{-1}(B_0b_0 + \mathbf{X}^{\prime}\mathbf{Y})$$
 
