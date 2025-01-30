@@ -417,6 +417,7 @@ class: title-slide
 # Overview of HMC
 
 - What if we could come up with a "direction" to point our proposal (or sequence of proposals) that stayed in the "typical set"
+  - Is there another way to get proposals with an acceptance probability of 1 besides Gibbs sampling?
 
 .center[<img src="assets/betancourt_2.png" alt = "cochran", height="400px">]
 
@@ -424,17 +425,46 @@ class: title-slide
 
 # Overview of HMC
 
-- The gradient of the posterior gets us close, but we need to augment it to get the desired field.
+- Instead of sampling just from $p(\theta | \mathbf{Y})$, we'll introduce a set of auxiliary variables $\rho$ and sample from the joint density $p(\rho, \theta | \mathbf{Y})$.
+  - We'll generate samples of $\rho$ and "evolve" $\theta$ in a particular manner.
+--
 
-.center[<img src="assets/betancourt_3.png" alt = "cochran", height="400px">]
+- That density factors such that if we integrated out the auxiliary variables, we'd get the target.
+
+$$p(\rho, \theta | \mathbf{Y}) = p(\rho | \theta, \mathbf{Y})p(\theta | \mathbf{Y})$$
+
+- And we'll typically pick a distribution on $\rho$ that is independent of the parameter values.
+
+$$p(\rho, \theta | \mathbf{Y}) = p(\rho)p(\theta | \mathbf{Y})$$
+--
+
+- If I propose $\rho^*$ randomly, how do I determine $\theta^*$ such that $p(\rho, \theta | \mathbf{Y}) = p(\rho^*, \theta^* |\mathbf{Y})$ and my acceptance probability is $1$?
 
 ---
 
 # Overview of HMC
 
-- Analogizing to a physical system, HMC introduces a "momentum" variable $p$ for each parameter $q$
-  - $H(p, q)$ is the "Hamiltonian" for each point -- a sum of "kinetic" and a "potential" energies -- the potential energy is the log density.
-  - Using Hamilton's equations of motion, we obtain a method for generating updates that "conserve" energy
+- The joint density defines a Hamiltonian $H(\rho, \theta)$ which characterizes the target distribution - in the physics analogy, this is the "total energy" of our system.
+
+$$\begin{align*}H(\rho, \theta) &= -\log(p(\rho, \theta | \mathbf{Y}))\\
+&= - \log(p(\rho)) - \log(p(\theta | \mathbf{Y}))\\
+&= T(\rho) + V(q)\end{align*}$$
+
+--
+
+- Energy is conserved in this system, so if we randomly choose $\rho$ and then jointly evolve $\rho$ and $\theta$ according to **Hamilton's equations**, we'll explore a space of proposals that are guaranteed to accept.
+
+$$\begin{align*}\frac{d\theta}{dt} &= + \frac{\partial H}{\partial \rho} = \frac{\partial{T}}{\partial{\rho}}\\
+\frac{d\rho}{dt} &= -\frac{\partial H}{\partial \theta} = -\frac{\partial V}{\partial{\theta}}\end{align*}$$
+
+---
+
+# Overview of HMC
+
+- **HMC Algorithm** (in Stan)
+  - Propose $\rho^* \sim \text{MultivariateNormal}(0, M)$
+  - Evolve the joint system of $\rho^*, \theta^*$ using Hamilton's equations for some number of steps 
+  - Metropolis accept/reject the proposed new set of values.
   
 .center[<img src="assets/betancourt_4.png" alt = "cochran", height="400px">]
 
@@ -452,8 +482,11 @@ class: title-slide
   - Many modern techniques use **automatic** differentiation
 --
 
-- **Intuition**: Decompose the unnormalized posterior into a series of elementary arithmetic operationns and functions where derivatives are trivially known
+- **Intuition**: Decompose the unnormalized posterior into a series of elementary arithmetic operations and functions where derivatives are trivially known
   - Use the **chain rule** to construct the gradient from the component functions + their derivatives.
+--
+
+- **Downside**: Can't use HMC for *discrete* parameters (but can often just marginalize those out).
 
 ---
 
@@ -672,7 +705,7 @@ model_fit <- stan(
   model_code = model_structure,  # Stan code
   data = data_source,    # named list of data
   chains = 4,             # number of Markov chains
-  warmup = 500,          # number of warmup iterations per chain
+  warmup = 50,          # number of warmup iterations per chain
   iter = 2500,            # total number of iterations per chain
   cores = 4,              # number of cores (could use one per chain - by default uses however many you have)
   refresh = 0,          # no progress shown

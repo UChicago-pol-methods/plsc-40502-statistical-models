@@ -778,6 +778,7 @@ class: title-slide
 # Overview of HMC
 
 - What if we could come up with a &quot;direction&quot; to point our proposal (or sequence of proposals) that stayed in the &quot;typical set&quot;
+  - Is there another way to get proposals with an acceptance probability of 1 besides Gibbs sampling?
 
 .center[&lt;img src=&quot;assets/betancourt_2.png&quot; alt = &quot;cochran&quot;, height=&quot;400px&quot;&gt;]
 
@@ -785,17 +786,46 @@ class: title-slide
 
 # Overview of HMC
 
-- The gradient of the posterior gets us close, but we need to augment it to get the desired field.
+- Instead of sampling just from `\(p(\theta | \mathbf{Y})\)`, we&#39;ll introduce a set of auxiliary variables `\(\rho\)` and sample from the joint density `\(p(\rho, \theta | \mathbf{Y})\)`.
+  - We&#39;ll generate samples of `\(\rho\)` and &quot;evolve&quot; `\(\theta\)` in a particular manner.
+--
 
-.center[&lt;img src=&quot;assets/betancourt_3.png&quot; alt = &quot;cochran&quot;, height=&quot;400px&quot;&gt;]
+- That density factors such that if we integrated out the auxiliary variables, we&#39;d get the target.
+
+`$$p(\rho, \theta | \mathbf{Y}) = p(\rho | \theta, \mathbf{Y})p(\theta | \mathbf{Y})$$`
+
+- And we&#39;ll typically pick a distribution on `\(\rho\)` that is independent of the parameter values.
+
+`$$p(\rho, \theta | \mathbf{Y}) = p(\rho)p(\theta | \mathbf{Y})$$`
+--
+
+- If I propose `\(\rho^*\)` randomly, how do I determine `\(\theta^*\)` such that `\(p(\rho, \theta | \mathbf{Y}) = p(\rho^*, \theta^* |\mathbf{Y})\)` and my acceptance probability is `\(1\)`?
 
 ---
 
 # Overview of HMC
 
-- Analogizing to a physical system, HMC introduces a &quot;momentum&quot; variable `\(p\)` for each parameter `\(q\)`
-  - `\(H(p, q)\)` is the &quot;Hamiltonian&quot; for each point -- a sum of &quot;kinetic&quot; and a &quot;potential&quot; energies -- the potential energy is the log density.
-  - Using Hamilton&#39;s equations of motion, we obtain a method for generating updates that &quot;conserve&quot; energy
+- The joint density defines a Hamiltonian `\(H(\rho, \theta)\)` which characterizes the target distribution - in the physics analogy, this is the &quot;total energy&quot; of our system.
+
+`$$\begin{align*}H(\rho, \theta) &amp;= -\log(p(\rho, \theta | \mathbf{Y}))\\
+&amp;= - \log(p(\rho)) - \log(p(\theta | \mathbf{Y}))\\
+&amp;= T(\rho) + V(q)\end{align*}$$`
+
+--
+
+- Energy is conserved in this system, so if we randomly choose `\(\rho\)` and then jointly evolve `\(\rho\)` and `\(\theta\)` according to **Hamilton&#39;s equations**, we&#39;ll explore a space of proposals that are guaranteed to accept.
+
+`$$\begin{align*}\frac{d\theta}{dt} &amp;= + \frac{\partial H}{\partial \rho} = \frac{\partial{T}}{\partial{\rho}}\\
+\frac{d\rho}{dt} &amp;= -\frac{\partial H}{\partial \theta} = -\frac{\partial V}{\partial{\theta}}\end{align*}$$`
+
+---
+
+# Overview of HMC
+
+- **HMC Algorithm** (in Stan)
+  - Propose `\(\rho^* \sim \text{MultivariateNormal}(0, M)\)`
+  - Evolve the joint system of `\(\rho^*, \theta^*\)` using Hamilton&#39;s equations for some number of steps 
+  - Metropolis accept/reject the proposed new set of values.
   
 .center[&lt;img src=&quot;assets/betancourt_4.png&quot; alt = &quot;cochran&quot;, height=&quot;400px&quot;&gt;]
 
@@ -813,8 +843,11 @@ class: title-slide
   - Many modern techniques use **automatic** differentiation
 --
 
-- **Intuition**: Decompose the unnormalized posterior into a series of elementary arithmetic operationns and functions where derivatives are trivially known
+- **Intuition**: Decompose the unnormalized posterior into a series of elementary arithmetic operations and functions where derivatives are trivially known
   - Use the **chain rule** to construct the gradient from the component functions + their derivatives.
+--
+
+- **Downside**: Can&#39;t use HMC for *discrete* parameters (but can often just marginalize those out).
 
 ---
 
