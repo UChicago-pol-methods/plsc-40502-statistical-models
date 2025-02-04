@@ -1,0 +1,1223 @@
+---
+title: "Week 5: More Multilevel Models"
+subtitle: "PLSC 40502 - Statistical Models"
+# author: "Anton Strezhnev"
+output: 
+  xaringan::moon_reader:
+    self_contained: true
+    css: [default, uchicago_pol_meth.css]
+    nature:
+      highlightLines: true
+      ratio: '16:9'
+      
+---
+class: title-slide
+
+# Review
+$$
+  \require{cancel}
+  \DeclareMathOperator*{\argmin}{arg\,min}
+$$
+  
+```{r, echo = F, message=F, warnings=F}
+library(tidyverse)
+library(haven)
+library(estimatr)
+library(knitr)
+library(rstan)
+library(bayesplot)
+
+options(digits=3)
+
+```
+
+---
+
+# Previously
+
+$$
+  \DeclareMathOperator*{\argmax}{arg\,max}
+$$
+
+- **Stan**
+  - **Hamiltonian Monte Carlo** - use the gradient of the likelihood $\times$ prior to get good M-H proposals
+    - Avoids proposals that are either too auto-correlated and too likely to be rejected
+  - Commmon structure to statistical modeling: `data`, `parameters`, `model`
+  - Frequently used models have canned routines in `rstanarm`
+--
+
+- **Diagnosing model fit**
+  - Posterior predictive checks
+  - **Information criteria** vs. **Cross-validation**
+  - log-predictive density as a measure of prediction quality (how much probability mass do we place on the "correct" outcome)
+
+---
+
+# This week
+
+- **Multilevel regression**
+  - Extending the Bayesian GLM by adding additional **grouping** and structure
+  - "Random effects" models/"Partial pooling"
+--
+
+- **Post-stratifiation**
+  - Adjusting non-representative surveys to match population targets
+  - Combining with multilevel regression: "MrP"
+--
+
+- **Dynamic regression**
+  - Modeling dependence in the parameters over time
+  - Autoregressive models
+  - Latent factor models
+
+---
+
+
+class: title-slide
+
+# Multilevel Models
+
+
+---
+
+# Hierarchical Models
+
+- In our simple normal regression from before, we assumed both a common mean and intercept for the data.
+  - The underlying model is the same regardless of state.
+--
+
+- We also assumed that observations were completely exchangeable
+  - $Y_i \sim \text{Normal}(X_i^{\prime}\beta, \sigma^2)$ implies no residual correlation in the outcomes across **all** counties.
+--
+
+- This may be a poor modeling choice if states are very heterogeneous and information about the state in which a county is in would provide additional predictive power beyond knowing the 2016 presidential vote.
+  - Additionally, **exchangeability** of observations may be violated -- unobserved factors may lead observations within a particular state to be correlated (e.g. if all counties in a region are exposed to some common shock). 
+
+---
+
+# Hierarchical Models
+
+- **Hierarchical** or **Multilevel** linear models try to address this by incorporating additional structure on the regression parameters.
+  - Suppose observations belong to a group $j \in \{1, 2, 3, \dotsc, J\}$ (e.g. states, time periods, schools, etc...)
+  - We observe $Y_{ij}$ as the outcome for unit $i$ in grouping $j$.
+--
+
+- We can incorporate group membership into the data-generating process.
+- Instead of a **common prior** on $\beta \sim \text{Normal}(b_0, B_0^{-1})$, we may do something like:
+  
+  $$\beta_j \sim \text{Normal}(\mu_{\beta}, \Sigma_{\beta})$$
+  $$Y_{ij} \sim \text{Normal}(X_{ij}^{\prime}\beta_{j}, \sigma^2)$$
+  
+--
+- This model assumes that each group has it's own set of group-level coefficients $\beta_j$ that are drawn from a common distribution centered at $\beta$.
+- The choice of prior on $\beta$ then dictates the degree of **pooling** across groupings.
+  - Flat prior: **no pooling** - $\beta_j$ are estimated entirely separately
+  - Zero variance prior: complete pooling (all $\beta_j$ are equal to $\beta$)
+
+---
+
+
+# Hierarchical Models
+
+- There are lots of choices about how we want to incorporate hierarchy into the model the coefficients across groupings
+  - What levels of aggregation and how many?
+  - Which parameters should be allowed to vary (all of the coefficients or just the intercepts)?
+  - Where does the structure enter into the model (the means? the variances? the covariances?)
+
+---
+
+# Revisiting: Predicting Elections
+
+```{r, message=F, warning=F}
+# Load the data
+elections <- read_csv("data/us-house-wide.csv")
+
+# Aggregate the house data to counties
+elections_county <- elections %>% group_by(fipscode) %>% summarize(state=state[1], county=county[1], 
+                                                                   total.votes = sum(total.votes),
+                                                                   dem = sum(dem))
+
+# Merge in 2015 Presidential
+pres_2016 <- read_csv("data/clinton_2016_vote.csv")
+elections_county <- elections_county %>% left_join(pres_2016 %>% dplyr::select(county_fips, candidatevotes, totalvotes),
+                                                   by=c(fipscode="county_fips"))
+
+# Generate vote shares
+elections_county$dem2018 <- elections_county$dem/elections_county$total.votes
+elections_county$dem2016 <- elections_county$candidatevotes/elections_county$totalvotes
+
+# Drop missing
+elections_county <- elections_county %>% filter(!is.na(dem2018)&!is.na(dem2016))
+```
+
+```{r, message=F, warning=F}
+X_mat <- model.matrix(dem2018 ~ dem2016, data=elections_county)
+Y <- elections_county$dem2018
+K <- ncol(X_mat) # Number of beta parameters
+```
+
+---
+# Application: Elections
+
+- Let's implement the "Normal Regression" model in Stan
+  
+```{r}
+model_structure <- "
+data {
+  int N; // number of observations
+  int K; // number of covariates
+  matrix[N, K] X; //covariate matrix
+  vector[N] y; //outcome vector
+}
+parameters {
+  vector[K] beta; //regression coefficients
+  real<lower = 0> sigma; // standard deviation
+}
+model {
+  beta ~ normal(0, 3); // multivariate normal prior
+  sigma ~ inv_gamma(0.001/2, 0.001/2); // inverse gamma
+  y ~ normal(X * beta, sigma); // * is matrix multiplication if terms are matrices
+}
+generated quantities {
+  array[N] real y_rep = normal_rng(X * beta, sigma);
+  vector[N] log_lik;
+  for (n in 1:N) log_lik[n] = normal_lpdf(y[n] | X[n, ] * beta, sigma);
+}
+"
+```
+
+---
+
+# Application: Elections
+
+- Load the relevant packages
+
+```{r, warning=F, message=F, results=F}
+library(rstan)
+```
+
+- Pass the actual parameters as a list
+
+```{r}
+data_source <- list(N = nrow(X_mat), K = ncol(X_mat), X=X_mat, y=Y)
+```
+
+---
+
+# Application: Elections
+
+- Run Stan! 
+
+```{r, echo=T, message=F, warning=F, cache=T, results=F}
+model_fit <- stan(
+  model_code = model_structure,  # Stan code
+  data = data_source,    # named list of data
+  chains = 4,             # number of Markov chains
+  warmup = 50,          # number of warmup iterations per chain
+  iter = 2500,            # total number of iterations per chain
+  cores = 4,              # number of cores (could use one per chain - by default uses however many you have)
+  refresh = 0,          # no progress shown
+  seed = 60637
+  )
+```
+
+---
+
+# Leave-one-out CV 
+
+- Once specified, we can obtain an estimate of the expected log predictive accuracy 
+
+```{r, warning=F, message=F, cache=T, }
+library(loo)
+```
+
+```{r, warning=F, message=F, cache=T}
+loo_reg <- loo(model_fit, pars="log_lik")
+loo_reg$estimates
+```
+
+---
+
+# Varying intercepts model
+
+- Our regression from before is an example of a fully pooled regression.
+  - Within individual states though, the regression line may be a poor predictor
+  - The simplest fix is to allow the "intercept" to shift across units.
+--
+
+- Assume:
+
+$$Y_{ij} \sim \text{Normal}(X_{ij}^{\prime}\beta + \alpha_{j}, \sigma^2)$$
+$$\alpha_j \sim \text{Normal}(0, \sigma^2_\alpha)$$
+
+And keep the same priors as before on the $\beta$ and $\sigma^2_j$ parameters. Here, we now omit the intercept from the betas.
+
+--
+
+- $\alpha_j$ can be interpreted as the group-specific "shift" in the intercept from the "grand" intercept $\beta_0$
+  - An equivalent parameterization would be to remove the intercept from $\beta$ and write $\alpha_j \sim Normal(\mu_\alpha, \Sigma_\alpha)$
+
+
+---
+
+# Varying intercepts model
+
+- Let's implement this in Stan - first, our `data` block
+
+```{stan output.var='data.int', eval=F, tidy=F}
+data{
+  int N; // number of observations
+  int J; // Number of groups
+  int K; // number of covariates
+  array[N] int J_i; // group membership indicator
+  matrix[N, K] X; //matrix of covariates
+  vector[N] y; //outcome
+}
+```
+
+---
+
+# Varying intercepts model
+
+- Next, our parameters.
+
+```{stan output.var='par.int', eval=F, tidy=F}
+parameters{
+  vector[K] beta; // beta coefficients
+  vector[J] alpha; // random intercepts
+  real<lower = 0> sigma; // variance of outcome
+  real<lower=0> sigma_a; // variance of intercepts
+}
+```
+
+---
+
+# Varying intercepts model
+
+- Finally, our model
+
+```{stan output.var='model.int', eval=F, tidy=F}
+model{
+  beta ~ normal(0, 3); // normal prior on coefficients
+  alpha ~ normal(0, sigma_a); // normal distribution on random intercepts
+  sigma ~ inv_gamma(0.001/2, 0.001/2); 
+  sigma_a ~ inv_gamma(0.001/2, 0.001/2);
+  y ~ normal(alpha[J_i] + X*beta, sigma);
+}
+```
+
+---
+
+# Varying intercepts model
+
+- Put it into Stan!
+
+```{r, echo=F}
+varying_intercepts_model <- "
+data{
+  int N; // number of observations
+  int J; // Number of groups
+  int K; // number of covariates
+  array[N] int J_i; // group membership indicator
+  matrix[N, K] X; //matrix of covariates
+  vector[N] y; //outcome
+}
+parameters{
+  vector[K] beta; // beta coefficients
+  vector[J] alpha; // random intercepts
+  real<lower = 0> sigma; // variance parameters
+  real<lower=0> sigma_a;
+}
+model{
+  beta ~ normal(0, 3); // normal prior on coefficients
+  alpha ~ normal(0, sigma_a); // normal distribution on random intercepts
+  sigma ~ inv_gamma(0.001/2, 0.001/2); 
+  sigma_a ~ inv_gamma(0.001/2, 0.001/2);
+  y ~ normal(alpha[J_i] + X*beta, sigma);
+}
+generated quantities {
+  array[N] real y_rep = normal_rng(alpha[J_i] + X*beta, sigma);
+  vector[N] log_lik;
+  for (n in 1:N) log_lik[n] = normal_lpdf(y[n] | alpha[J_i[n]] + X[n]*beta, sigma);
+}
+"
+```
+
+```{r}
+elections_county$state_num <- as.numeric(as.factor(elections_county$state))
+varying_intercepts_data <- list(N = nrow(X_mat), J = length(unique(elections_county$state_num)),
+                    J_i = elections_county$state_num,
+                    K = ncol(X_mat), X=X_mat, y=Y)
+```
+
+```{r, echo=T, message=F, warning=F, cache=T, results=F}
+model_var_intercept <- stan(
+  model_code = varying_intercepts_model,  # Stan code
+  data = varying_intercepts_data,    # named list of data
+  chains = 4,             # number of Markov chains
+  warmup = 500,          # number of warmup iterations per chain
+  iter = 2500,            # total number of iterations per chain
+  cores = 4,              # number of cores (this is much slower if = 1)
+  refresh = 0,          # no progress shown
+  seed = 60637          # random seed
+  )
+```
+
+---
+
+# Varying intercepts model
+
+- Summarize the fit
+
+```{r}
+print(model_var_intercept, pars = c("beta","sigma","alpha[1]"))
+```
+
+---
+
+# Posterior predictive check
+
+- Pull the `y_rep` from the model (in the form of a list)
+
+```{r}
+y_ppc_varint <- rstan::extract(model_var_intercept)$y_rep
+```
+
+--
+
+- Calculate the upper and lower credible intervals
+
+```{r}
+y_ppc_ci_varint <- t(apply(y_ppc_varint, 2, function(x) quantile(x, c(.025, .975))))
+```
+
+
+- What's the share that cover the truth?
+
+```{r}
+cover_95_varint <- y_ppc_ci_varint[,1]<Y&Y<y_ppc_ci_varint[,2]
+mean(cover_95_varint)
+```
+
+---
+
+# Posterior predictive check
+
+- Empirical density vs. predicted
+
+```{r, fig.align="center", fig.height=6, fig.width=8, warning=F, cache = T}
+bayesplot::ppc_dens_overlay(y = elections_county$dem2018, yrep = y_ppc_varint[1:25,])
+```
+
+---
+
+# Posterior predictive check
+
+- What's the root mean squared deviation from the truth?
+
+```{r}
+sqd_error_varint <- apply((Y - t(y_ppc_varint))^2, 2, mean)
+print(sqrt(mean(sqd_error_varint)))
+```
+
+--
+
+- Make a dataframe for the predictive "ribbon" plot
+
+```{r}
+elections_county$lowerppdVI <- y_ppc_ci_varint[,1]
+elections_county$upperppdVI <- y_ppc_ci_varint[,2] 
+```
+
+---
+
+# Outcome plots
+
+- Compare the two regression lines
+
+```{r, echo=F}
+elections_county$groupMeanInt <- mean(rstan::extract(model_var_intercept, "beta[1]")$`beta[1]`) + colMeans(rstan::extract(model_var_intercept)$alpha)[elections_county$state_num]
+elections_county$groupMeanSlope <- mean(rstan::extract(model_var_intercept, "beta[2]")$`beta[2]`)
+```
+
+```{r, fig.align="center", fig.height=6, fig.width=11, warning=F,echo=F, cache=T}
+elections_county %>% filter(state %in% c("IL", "TX", "CA")) %>% ggplot(aes(y=dem2018, x=dem2016)) + geom_ribbon(aes(x=dem2016, ymin=lowerppdVI, ymax=upperppdVI), alpha=.2, col="orange") + geom_point(cex=.6, alpha=1, col="blue")  + geom_abline(aes(intercept=groupMeanInt, slope=groupMeanSlope), col="red",  lwd=1.5)  + geom_abline(aes(intercept=mean(rstan::extract(model_fit, "beta[1]")$`beta[1]`), slope=mean(rstan::extract(model_fit, "beta[2]")$`beta[2]`)), col="black", alpha=.4, lwd=1.5) + theme_bw() + xlim(0, 1) + ylim(0,1) + xlab("2016 Democratic Presidential Vote") +ylab("2018 Democratic House Vote") + facet_wrap(~state, ncol=3)
+```
+
+---
+
+# Leave-one-out statistic
+
+- Calculate the leave-one-out statistic
+
+```{r, warning=F, message=F}
+library(loo)
+```
+
+```{r, warning=F, messsage=F, cache=T}
+loo_varint <- loo(model_var_intercept, pars="log_lik")
+loo_varint$estimates
+```
+
+```{r, warning=F, messsage=F}
+loo_compare(loo_varint, loo_reg)
+```
+
+---
+
+# Varying intercepts model
+
+- Plot the deviations from the "grand mean" intercept by state
+
+```{r, fig.align="center",message=F, warning=F, fig.width=9, fig.height=7, echo=F}
+state_num_dict <- as.character(unique(as.factor(elections_county$state)))
+names(state_num_dict) <- stringr::str_c("alpha[", unique(as.numeric(as.factor(elections_county$state))), "]")
+alpha_plot <- mcmc_intervals(model_var_intercept, pars = names(state_num_dict)) + scale_y_discrete(labels=state_num_dict) +  geom_vline(xintercept=0, lty=2, col="black")
+alpha_plot
+```
+
+
+---
+
+# Varying slopes model
+
+- What if we allow all of the parameters to vary by group?
+
+$$\beta_j \sim \text{Normal}(\mu_{\beta}, \Sigma_{\beta})$$
+$$Y_{ij} \sim \text{Normal}(X_{ij}^{\prime}\beta_{j}, \sigma^2)$$
+
+- This is a more general and flexible hierarchical model
+  - But introduces a slight complication -- we now need a prior distribution on an entire **matrix** $\Sigma_{\beta}$ (the variances and covariances of the parameters).
+--
+
+- The conjugate prior is the inverse-Wishart, the multivariate extension of the inverse-gamma.
+  - An alternative non-conjugate prior (that appears to have better performance) is a scaled correlation matrix with an LKJ prior on the correlation matrix (see Stan documentation for more).
+  - The latter is now preferred (especially by the Stan programmers)
+
+---
+
+# Varying slopes model
+
+- Our prior on $\Sigma_{\beta}$ starts by decomposing $\Sigma_{\beta}$ into a diagonal scaling matrix $\text{diag}(\tau)$ and a correlation matrix $\Omega$
+
+$$\Sigma_{\beta} = \text{diag}(\tau)\Omega\text{diag}(\tau)$$
+--
+
+- For each $\tau_k$ we'll use a Half-Cauchy distribution (Cauchy with the constraint $\tau_k > 0$)
+- For $\Omega$, we'll use the Lewandowski-Kurowicka-Joe (LKJ) distribution which defines a distribution over symmetric positive definite matrices
+  - **Intuition**: Similar to a beta distribution in multiple dimensions.
+  
+---
+
+# Varying slopes model
+
+- Our `data` block
+
+```{stan output.var='data.slope', eval=F, tidy=F}
+data{
+  int N; // number of observations
+  int J; // Number of groups
+  int K; // number of covariates
+  array[N] int J_i; // group membership indicator
+  matrix[N, K] X; //matrix of covariates
+  vector[N] y; //outcome
+}
+```
+
+---
+
+# Varying slopes model
+
+- Our `parameters` field
+
+```{stan output.var='param.slope', eval=F, tidy=F}
+parameters{
+  corr_matrix[K] Omega; //prior correlation
+  vector<lower=0>[K] tau; //prior scale
+  vector[K] mu_beta;
+  array[J] vector[K] beta; //group-level coefficients
+  real<lower = 0> sigma; // variance parameters
+}
+```
+
+---
+
+# Varying slopes model
+
+- And our `model`
+
+```{stan output.var='model.slope', eval=F, tidy=F}
+model{
+  tau ~ cauchy(0, 2.5);
+  Omega ~ lkj_corr(2);
+  sigma ~ inv_gamma(0.001/2, 0.001/2); //Inverse-gamma
+  mu_beta ~ normal(0, 3);
+  beta ~ multi_normal(mu_beta, quad_form_diag(Omega, tau));
+  for (n in 1:N) {
+    y[n] ~ normal(X[n] * beta[J_i[n]], sigma);
+  }
+}
+```
+
+---
+
+# Varying slopes model
+
+- Run it in Stan
+
+```{r, echo=F}
+varying_slopes <- "
+data{
+  int N; // number of observations
+  int J; // Number of groups
+  int K; // number of covariates
+  array[N] int J_i; // group membership indicator
+  matrix[N, K] X; //matrix of covariates
+  vector[N] y; //outcome
+}
+parameters{
+  corr_matrix[K] Omega; //prior correlation
+  vector<lower=0>[K] tau; //prior scale
+  vector[K] mu_beta;
+  array[J] vector[K] beta; //group-level coefficients
+  real<lower = 0> sigma; // variance parameters
+}
+model{
+  tau ~ cauchy(0, 2.5);
+  Omega ~ lkj_corr(2);
+  sigma ~ inv_gamma(0.001/2, 0.001/2); //Inverse-gamma
+  mu_beta ~ normal(0, 3);
+  beta ~ multi_normal(mu_beta, quad_form_diag(Omega, tau));
+  for (n in 1:N) {
+    y[n] ~ normal(X[n] * beta[J_i[n]], sigma);
+  }
+}
+generated quantities {
+  array[N] real y_rep;
+  for (n in 1:N){
+    y_rep[n] = normal_rng(X[n]*beta[J_i[n]], sigma);
+  }
+  vector[N] log_lik;
+  for (n in 1:N) log_lik[n] = normal_lpdf(y[n] | X[n]*beta[J_i[n]], sigma);
+}
+"
+```
+
+
+```{r, echo=T, message=F, warning=F, cache=T, results=F}
+model_var_slope <- stan(
+  model_code = varying_slopes,  # Stan code
+  data = varying_intercepts_data,    # named list of data
+  chains = 4,             # number of Markov chains
+  warmup = 500,          # number of warmup iterations per chain
+  iter = 2500,            # total number of iterations per chain
+  cores = 4,  
+  refresh=0,          # no progress shown
+  seed = 60637          # random seed
+  )
+```
+
+---
+
+# Varying slopes model
+
+- Summarize the fit
+
+```{r}
+print(model_var_slope, pars=c("mu_beta"))
+```
+
+---
+
+# Varying slopes model
+
+- Pull the `y_rep` from the model (in the form of a list)
+
+```{r}
+y_ppc_varslope <- rstan::extract(model_var_slope)$y_rep
+```
+
+
+- Calculate the upper and lower credible intervals
+
+```{r}
+y_ppc_ci_varslope <- t(apply(y_ppc_varslope, 2, function(x) quantile(x, c(.025, .975))))
+```
+
+
+- What's the share that cover the truth?
+
+```{r}
+cover_95_varint <- y_ppc_ci_varslope[,1]<Y&Y<y_ppc_ci_varslope[,2]
+mean(cover_95_varint)
+```
+
+
+---
+
+# Empirical density 
+
+- Posterior predictions vs. empirical density
+
+```{r, fig.align="center", fig.height=6, fig.width=8, warning=F, cache = T}
+bayesplot::ppc_dens_overlay(y = elections_county$dem2018, yrep = y_ppc_varslope[1:25,])
+```
+
+---
+
+# Outcome plots
+
+- Compare the regression lines
+
+```{r, echo=F}
+elections_county$lowerppdVS <- y_ppc_ci_varslope[,1]
+elections_county$upperppdVS <- y_ppc_ci_varslope[,2] 
+elections_county$groupMeanInt_2 <- colMeans(rstan::extract(model_var_slope, "beta")$beta[,,1])[elections_county$state_num]
+elections_county$groupMeanSlope_2 <- colMeans(rstan::extract(model_var_slope, "beta")$beta[,,2])[elections_county$state_num]
+```
+
+```{r, fig.align="center", fig.height=6, fig.width=11, warning=F,echo=F, cache=T}
+elections_county %>% filter(state %in% c("IL", "TX", "CA")) %>% ggplot(aes(y=dem2018, x=dem2016)) + geom_ribbon(aes(x=dem2016, ymin=lowerppdVS, ymax=upperppdVS), alpha=.2, col="orange") + geom_point(cex=.6, alpha=1, col="blue")  + geom_abline(aes(intercept=groupMeanInt_2, slope=groupMeanSlope_2), col="red",  lwd=1.5)  + geom_abline(aes(intercept=mean(rstan::extract(model_fit, "beta[1]")$`beta[1]`), slope=mean(rstan::extract(model_fit, "beta[2]")$`beta[2]`)), col="black", alpha=.4, lwd=1.5) + theme_bw() + xlim(0, 1) + ylim(0,1) + xlab("2016 Democratic Presidential Vote") +ylab("2018 Democratic House Vote") + facet_wrap(~state, ncol=3)
+```
+
+---
+
+
+# Leave-one-out statistic
+
+- Calculate the leave-one-out statistic
+
+```{r, warning=F, message=F, results=FALSE}
+library(loo)
+```
+
+```{r, warning=F, messsage=F, cache=T}
+loo_varslope <- loo(model_var_slope, pars="log_lik")
+loo_varslope$estimates
+```
+
+```{r, warning=F, messsage=F}
+loo_compare(loo_varslope ,loo_varint, loo_reg)
+```
+
+---
+class: title-slide
+
+# Post-stratification
+
+---
+
+# Surveys
+
+- Historically, two approaches to survey sampling design
+  - **Quota sampling** - Define a set of known demographic targets and recruit respondents to match.
+  - **Probability sampling** - Select respondents from a **sampling frame** at random with a known probability.
+--
+
+- Dominance of **probability sampling** in the late 20th century
+  - Random Digit Dialing allowed for (near)-simple random samples from the U.S. adult population
+  - High response rates
+
+---
+
+# Decline of pure probability samples
+
+- Two big factors have lead to the decline of exclusively probability-based sampling approaches
+  - Decline in population coverage - fewer individuals have landlines!
+  - Extremely high non-response rates.
+--
+
+- Non-random non-response can bias our estimates
+  - Non-responders have different characteristics to the responders that may be correlated with the target quantity of interest.
+  - Huge concern in recent efforts to poll elections (e.g. "shy tories")
+--
+
+- Modern polling
+  - Combine probability and quota approaches
+  - Weighting ex-post to match population targets.
+
+---
+
+# Survey inference
+
+- Our goal is to estimate some parameter $\theta_{y}$ related to a population outcome variable $y$ (e.g. a proportion, mean, median, etc...)
+--
+
+- In addition to the outcome of interest $y$, we observe **auxiliary** variables $\mathbf{x}$
+  - Units are sampled from some unknown target population $f_{\mathcal{U}}(y, \mathbf{x})$
+  - The in-sample distribution of the **responders** is denoted $g_{\mathcal{R}}(y, \mathbf{x})$
+--
+
+- Our auxiliary information involves some **known features** of the target distribution: ${\breve{I}}_{\mathbf{x}}$
+  - We'll use this to construct **targets** for the population distribution $\tilde{T}_{\mathbf{x}} = \{ \tilde{T}_{\mathbf{x}1}, \dotsc, {\tilde{T}}_{\mathbf{x}M}\}$
+  - For example, suppose we know the full population distribution of age, gender, education, income, and party ID
+--
+
+- In some settings, the auxiliary distribution maps easily to the target - but in other settings we have to use the auxiliary information to **estimate** our target
+  - (e.g) we might have features of our target distribution but we don't know who will turn out to **vote** before the election
+  - "Likely voter models" are a **target estimation** problem
+
+---
+
+# Inference with known sampling weights
+
+- If we know the probability that a unit is selected into the sample from the sample frame $\pi_i$, it is straightforward to construct an estimator $\hat{\theta_{y}}$ of the population mean $\theta_{y}$.
+- The **Horvitz-Thompson** estimator weights each unit by $d_i = \frac{1}{\pi_i}$, the inverse probability of being selected into the sample
+
+$$\hat{\theta_{y}}^{\text{HT}} = \frac{\sum_{i=1}^N d_i Y_i}{\mathbb{E}[\sum_{i=1}^n d_i]}$$
+
+- When sampling probabilities are equivalent, this reduces to the sample mean.
+--
+
+- More commonly, rather than using the expectation of the weights in the denominator, we'll use the actual observed sum of the weights, giving the Hajek estimator
+
+$$\hat{\theta_{y}}^{\text{H}} = \frac{\sum_{i=1}^N d_i Y_i}{\sum_{i=1}^n d_i}$$
+---
+
+# Unknown sampling weights
+
+- When $d_i$ is not known, we will need to estimate **adjustment weights** using a combination of modeling assumptions and auxiliary data
+  - Even when $d_i$ is known, if non-response is high, we still don't know the probability of selection into the **observed** data $\rho_i$
+--
+
+- With adjustment weights $\tilde{w}_i$, our Hajek estimator becomes
+
+$$\hat{\theta_{y}}^{\text{W}} = \frac{\sum_{i=1}^N \tilde{w}_i Y_i}{\sum_{i=1}^n \tilde{w}_i}$$
+--
+
+- Now the weights are not necessarily known but must be obtained from our population targets $\tilde{T}_{\mathbf{x}}$
+
+---
+
+# Post-stratification
+
+- The easiest approach to adjusting a non-representative survey is to weight to match the **known** **joint** distribution of $x$ in the population $f_{\mathcal{U}}(\mathbf{x})$
+  - This requires a lot of auxiliary information about the target $f_{\mathcal{U}}(\mathbf{x})$ - typically obtained from high-quality census data
+  - (e.g.) U.S. Census Public-Use Microdata: What is the share of Black, college educated, 30-45 year olds in Massachusetts?
+--
+
+- In post-stratification, we divide our sample up into $C$ **cells** $c$ that are mutually exclusive and exhaustive.
+  - $\tilde{T}_{\mathbf{x}} = \{\tilde{P}_{1}, \tilde{P}_2, \dotsc, \tilde{P}_{C}\}$ is our population distribution of these cells
+--
+
+- Our **sampling/response model** assumes that **within** each of these cells we have a simple-random sample from that particular stratum of the population
+  - There may be variation in non-response or over/under-sampling, but only **across** cells
+  - "post"-stratification because the intuition is akin to a design where we actually *did* stratify ex-ante
+--
+
+- Our **measurement model** assumes we observe the joint distribution of auxiliary variables $\mathbf{x}$ in the target population
+  - Difficult in many cases!
+  
+---
+
+# Post-stratification
+
+- Two ways to think of post-stratification:
+- **First** - Let $\hat{\theta}_{y}^{c}$ denote our estimator for the population mean **within** cell $c$ (possibly using design weights $d_i$)
+  - Then, our post-stratification estimator $\hat{\theta}_{y}^{PS}$ is:
+  
+$$\hat{\theta}_{y}^{PS} = \sum_{c=1}^C \tilde{P}_{c} \hat{\theta}_{y}^{c}$$
+--
+
+- Alternatively, we'll sometimes write $\tilde{P}_c = \frac{\tilde{N}_c}{\tilde{N}}$ where $\tilde{N}$ is the size of the population and $\tilde{N}_c$ is the number of units in that cell.
+
+$$\hat{\theta}_{y}^{PS} = \sum_{c=1}^C \frac{\tilde{N}_c}{\tilde{N}} \hat{\theta}_{y}^{c}$$
+
+--
+
+- Fixed "constant" weights on the within-cell estimators.
+
+---
+
+# Post-stratification
+
+- **Second** - We can think of it as weighting individual observations using our adjustment weights $\tilde{w}^{PS}_i$
+- Let $c(i)$ denote the class to which unit $i$ belongs. Then the post-stratification weights are
+
+$$\tilde{w}^{PS}_i = (\tilde{P}_{c(i)}/\hat{P}^{S}_{c(i)}) \times d_i$$
+
+where $\hat{P}^{S}_{c(i)}$ is the estimated **in-sample** proportion of observations in class $c$ 
+--
+
+- When design weights are constant, $\hat{P}^{S}_{c(i)}$ is just the sample mean of the indicator of class membership $\mathcal{1}_{i \in c}$ 
+  - More generally, you can write it as $\hat{P}^{S}_{c(i)} = (\sum_{i=1}^N  d_i \mathcal{1}_{i \in c})/(\sum_{i=1}^N d_i)$
+--
+
+- **Intuition**
+  - The weights **up-weight** observations that are under-represented in the sample relative to the target population
+  - The weights **down-weight** observations that are over-represented in the sample relative to the target population.
+
+---
+
+# Example: CCES 2020
+
+- Let's dive in to the 2020 CCES. 
+
+```{r, warning=F, message=F}
+library(survey)
+cces <- read_csv("data/CCES_subset.csv") %>% filter(!is.na(trumpApprove))
+cces$educ_bin[cces$educ_bin == "College degree"] <- "College graduate" # Fix a naming inconsistency 
+```
+
+- We'll be using a subset of the outcome data, looking at the share of respondents who state that they strongly or somewhat approve of then-President Donald Trump.
+--
+
+- Start by making a `svydesign` object - we'll pretend that the sampling weights don't exist for now
+
+```{r}
+cces_surv_unwt <- svydesign(~1, weights = ~1, data=cces)
+```
+
+--
+
+- In-sample, what's the proportion of respondents who approve of Trump?
+
+```{r}
+svymean(~trumpApprove, design=cces_surv_unwt)
+```
+
+---
+
+# Example: CCES 2020
+
+- How does this compare to the properly weighted mean?
+
+```{r}
+cces_surv_wt <- svydesign(~1, weights = ~commonweight, data=cces)
+svymean(~trumpApprove, design=cces_surv_wt)
+```
+
+- Trump's approval is a few points higher after the weighting adjustment.
+
+- From the CCES Guide:
+
+> the completed cases were weighted to the sampling frame using entropy balancing. The 2019
+ACS was used as the frame for weighting the common content and the team samples. The
+CES sample was weighted to match the distributions of the 2019 ACS on gender, age, race,
+Hispanic origin, and education level.
+> The moment conditions included age, gender, education, race, plus their interactions. The
+resultant weights were then post-stratified by age, gender, education, race, “born again"
+status, voter registration status, 2016 Presidential vote choice, and 2020 Presidential vote
+choice as needed.
+
+---
+
+# Population targets
+
+- We'll be using the 2020 ACS 5-year Public Use Microdata Sample
+  - Obtain the complete **joint** distribution of age, gender and education in the U.S.
+
+```{r, message=F, warning=F}
+acs_targets <- read_csv("data/ACS_2020_microdata_3cat.csv")
+```
+
+
+- What's the **marginal** distribution of education in the target population?
+
+```{r}
+acs_targets %>% group_by(educ_bin) %>% summarize(n = sum(Count)) %>% ungroup() %>% mutate(prop = n/sum(n))
+```
+
+---
+
+# Population targets
+
+- How does it compare to the **unweighted** marginal distribution in the sample?
+
+```{r}
+cces %>% group_by(educ_bin) %>% summarize(n = n()) %>% ungroup() %>% mutate(prop = n/sum(n))
+```
+
+---
+
+# Population targets
+
+- What about the **joint** distribution of gender and education?
+--
+
+- In the **population**
+
+```{r, message=F}
+acs_targets %>% group_by(educ_bin, gender_bin) %>% summarize(n = sum(Count)) %>% ungroup() %>% mutate(prop = n/sum(n))
+```
+
+---
+
+# Population targets
+
+- In the **sample**
+
+```{r, message=F}
+cces %>% group_by(educ_bin, gender_bin) %>% summarize(n = n()) %>% ungroup() %>% mutate(prop = n/sum(n))
+```
+
+---
+
+# Post-stratification
+
+- We can construct the post-stratification weights manually
+  - Start by calculating the population proportions in each bin
+
+```{r}
+acs_targets <- acs_targets %>% mutate(strata = str_c(gender_bin, educ_bin, age_bin, sep="-"),
+                                      pop_proportion = Count/sum(Count))
+```
+--
+
+- Do the same for the sample
+
+```{r}
+cces <- cces %>% mutate(strata = str_c(gender_bin, educ_bin, age_bin, sep="-"))
+cces_strat <- cces %>% group_by(strata) %>% summarize(n=n()) %>% ungroup() %>% mutate(samp_proportion = n/sum(n))
+```
+--
+
+- Join the datasets
+
+```{r}
+cces <- cces %>% left_join(acs_targets%>% select(strata, pop_proportion), by="strata")
+cces <- cces %>% left_join(cces_strat %>% select(strata, samp_proportion), by="strata")
+```
+
+---
+
+# Post-stratification
+
+- Construct the post-stratification weights
+
+```{r}
+cces <- cces %>% mutate(postStratWt = pop_proportion/samp_proportion)
+```
+
+- Take the weighted average to estimate Trump Approval
+
+```{r}
+weighted.mean(cces$trumpApprove, cces$postStratWt)
+```
+
+---
+
+# Population targets
+
+- Did the weights equalize the distributions? Let's look again at the joint distribution of gender and education
+--
+
+- In the **population**
+
+```{r, message=F}
+acs_targets %>% group_by(educ_bin, gender_bin) %>% summarize(n = sum(Count)) %>% ungroup() %>% mutate(prop = n/sum(n))
+```
+
+---
+
+# Population targets
+
+- In the re-weighted **sample**
+
+```{r, message=F}
+cces %>% group_by(educ_bin, gender_bin) %>% summarize(n = sum(postStratWt)) %>% ungroup() %>% mutate(prop = n/sum(n))
+```
+
+---
+
+# Post-stratification.
+
+- We can also use the `survey` package - create the post-stratification weights using `postStratify` in `survey`
+
+```{r}
+cces_postStrat <- postStratify(cces_surv_unwt, strata=~gender_bin + age_bin + educ_bin,
+                               population = acs_targets %>% select(gender_bin, age_bin, educ_bin, Freq = Count))
+```
+
+--
+
+- Then use `svymean`
+
+```{r}
+svymean(~trumpApprove, cces_postStrat)
+```
+
+
+---
+
+class: title-slide
+
+# MrP
+
+---
+
+# Multilevel Regression and Post-stratification
+
+- Often we're interested in estimating political attitudes at very small areas
+  - Within a nationally-representative sample, we may only have a minor fraction of respondents who are even in a particular region.
+--
+
+- Beyond that, our sample may not be demographically representative for a given region
+  - Can we do better than just using the sub-group means for our outcome of interest?
+
+---
+
+# CCES 2020
+
+- Our **unweighted** average Trump support for each state:
+
+```{r, echo = F, warning=F, message=F, fig.width=8, fig.height=6, fig.align="center"}
+library(usmap)
+library(ggplot2)
+library(viridis)
+state_summaries <- cces %>% group_by(inputstate) %>% summarize(values= mean(trumpApprove)*100) %>% rename(fips = inputstate) %>% mutate(fips = str_pad(fips, 2,pad="0"))
+plot_usmap(regions="states", data= state_summaries) + scale_fill_viridis(option="A",name = "Trump Approval", label = scales::comma) +
+  theme(legend.position = "right")
+```
+
+---
+
+# MrP
+
+- **Multilevel Regression** and **Post-stratification** combines two well-known tools to try to accomplish this task
+  1. **Multilevel regression**: Using the entire dataset, specify a flexible model for the outcome of interest
+  2. **Post-stratification**: Using known population characteristics, generate predictions for each covariate "cell" in each region
+--
+
+- The national-level regression allows us to improve **precision** in small-area estimation
+    - e.g. if some of the variability between regions is driven by individual or group-level characteristics, we can model the relationship between those characteristics and the outcome using **all** the data.
+--
+
+- The population-level data allows us to address non-response/sampling bias
+  - Ideally all of the variables that would go in the survey weighting model also go in the MrP model (so in principle we don't need to include survey weights in the analysis)
+
+---
+
+# MrP Workflow
+
+1. Get survey data that contains individual and group-level predictors (e.g. demographic characteristics + "small area" of residence)
+2. Get information on the "small areas" themselves 
+3. Estimate a multilevel regression model using these two sets of data
+4. Construct a post-stratification frame that has the joint distribution of our demographics for each "small area"
+5. Predict using the model for each cell in the post-stratification frame
+6. Aggregate to get predictions for each small area
+
+---
+
+# Example: CCES 2020
+
+- Let's fit a regression model 
+  - We'll use the `brms` package which has pre-existing implementations of popular models like the random slopes/random intercepts generalized linear mixed model
+--
+
+- We'll fit a simple logistic regression with coefficients on gender, age and education as well as a random intercept for state
+
+```{r, message=F, warning=F, results=F}
+library(brms)
+```
+
+```{r, cache=T, message=F, warning=F, results=F}
+state_mlm <- brm(trumpApprove ~ factor(gender_bin) + factor(age_bin) + factor(educ_bin) +  (1 | inputstate), 
+                           family = bernoulli(), data=cces, cores=4, warmup=1000, iter=2000)
+```
+
+---
+
+# Model diagnostics
+
+- Summarize the results
+
+```{r}
+summary(state_mlm)
+```
+
+---
+
+# Model diagnostics
+
+- Check convergence
+
+```{r, fig.align="center", fig.height=6, fig.width=10}
+plot(state_mlm, variable = "b_factorgender_binMale")
+```
+
+---
+
+# Generating the post-stratification frame
+
+- We'll use ACS 5-year microdata data at the state level to construct our post-stratification frame for each state
+
+```{r, message=F, warning=F}
+acs_state_targets <- read_csv("data/ACS_2020_microdata_by_state.csv") %>% filter(!is.na(Gender))
+fips_codes <- read_csv("data/us-state-ansi-fips.csv")
+acs_state_targets <- acs_state_targets %>% left_join(fips_codes, by=c(State="stname"))
+acs_state_targets$inputstate <- as.numeric(acs_state_targets$st)
+acs_state_targets <- acs_state_targets %>% pivot_longer(c(`18-29`, `30-44`, `45-64`, `65+`))
+acs_state_targets <- acs_state_targets %>% rename(gender_bin = Gender, educ_bin = Education, age_bin = name, Count=value)
+acs_state_targets <- acs_state_targets %>% mutate(prop_us = Count/sum(Count))
+acs_state_targets <- acs_state_targets %>% group_by(inputstate) %>% mutate(prop_state = Count/sum(Count)) %>% ungroup()
+```
+
+---
+
+# Generating the post-stratification frame
+
+- Each row contains a row for each **state** x **age** x **gender** x **education** combination
+
+```{r, message=F, warning=F}
+acs_state_targets
+```
+
+---
+
+# Predicting with the model
+
+- Use the model to make predictions on each row of our post-stratification frame
+
+```{r, message=F, warning=F}
+acs_state_targets$predict_mlm <- predict(state_mlm, newdata=acs_state_targets)[,1]
+```
+
+- Aggregate the predictions by the stratum shares to get state-level estimates!
+
+```{r}
+mrp_states <- acs_state_targets %>% group_by(st) %>% summarize(trumpApproveMLM = sum(predict_mlm*prop_state)*100) %>% rename(fips=st)
+```
+
+---
+
+# Compare
+
+- Use the model to make predictions on each row of our post-stratification frame
+
+```{r, message=F, warning=F}
+state_summaries %>% left_join(mrp_states, by="fips")
+```
+
+---
+
+# Visualize
+
+- Our **multilevel regression + post-stratification** estimates
+
+```{r, echo = F, warning=F, message=F, fig.width=8, fig.height=6, fig.align="center"}
+plot_usmap(regions="states", data= mrp_states, values="trumpApproveMLM") + scale_fill_viridis(option = "A", name = "Trump Approval", label = scales::comma) +
+  theme(legend.position = "right")
+```
+
+---
+
+# How to improve this model
+
+- We've provided a very simple example of an MrP model but there are a lot of ways it can be improved
+  1. More group-level predictors (e.g. Trump state-level vote share)
+  2. Individual-level interactions in the model + partial-pooling on the coefficients
+  3. Actually knowing the joint distribution of the demographics in each state!
+  4. Pool state-level means to regional rather than a common "grand" mean.
+  5. Many more possibilities...
+--
+
+- More generally, we have a dataset where even within each state, we have many observations to work with, so the model isn't that necessary
+  - MrP is most powerful when there are **very few** respondents from a particular small area in our data
+  
+---
+
+
+
+
+
