@@ -40,6 +40,10 @@ Below are the demographic columns. You will not be using these directly in the m
 - `pid3` - Three-category party ID
 - `pid7` - Seven-category party ID
 - `ideo5` - Five category ideology
+- `urbancity` - Type of area living in (city/suburb/town/rural area/other)
+- `religpew` - Religion
+- `pew_religimp` - Importance of religion
+- `pew_bornagain` - Born-again/evangelical Christian 
 
 For the mixture model, you'll be using the 17 following responses related to policy attitudes. Each of these is a "support/oppose" response to a particular policy policy proposal. Those questions are listed below
 
