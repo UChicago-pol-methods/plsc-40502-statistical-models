@@ -124,7 +124,7 @@ Now you'll compare your cluster model to a standard 2-parameter probit IRT model
 
 $$Pr(Y_{ij} = 1) = g^{-1}(\beta_j\theta_i - \alpha_j)$$
 
-where $g^{-1}$ is the inverse normal CDF function, $\alpha_j$ and $\beta_j$ are the "difficulty" and "discrimination" parameters for question $j$ and $\theta_i$ is the "ideal point" of respondent $i$.
+where $g^{-1}$ is the normal CDF function, $\alpha_j$ and $\beta_j$ are the "difficulty" and "discrimination" parameters for question $j$ and $\theta_i$ is the "ideal point" of respondent $i$.
 
 The `emIRT` library allows for fast estimation of item response theory models using the EM algorithm. Install and load this library.
 
