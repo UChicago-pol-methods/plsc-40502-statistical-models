@@ -26,6 +26,7 @@ library(estimatr)
 library(knitr)
 library(ggplot2)
 library(rstan)
+library(ggrepel)
 options(digits=3)
 
 ```
@@ -692,6 +693,220 @@ beta_plot
 ```
 
 ---
+
+# Dynamic IRT model
+
+- So far, we've focused on settings with just one time period.
+  - **Jackman and Trier (2008)** estimate latent democracy scores for each year entirely separately.
+--
+
+- But this seems inefficient. The previous year's latent score is probably a good predictor of this year's score.
+  - How do we incorporate this in the model?
+--
+
+- Put a **random walk prior** on $\theta_i$
+  - In political science, first used by **Martin and Quinn (2002)** to study ideology of supreme court justices.
+  - Many other applications to different settings (e.g. UNGA voting by **Bailey et. al. (2017)**)
+
+---
+
+# Dynamic IRT model
+
+- We observe roll call votes for $N$ legislators on $J$ bills across $T$ time periods.
+  - $Y_{ijt}$ denotes the choice ($1$ = Yea, $0$ = Nay)
+  - Note that not all legislators will vote in every time period, not every bill appears in every time period, etc...
+--
+
+- Same two-parameter set-up as before with a time-specific ideal point $\theta_{it}$. **Martin and Quinn (2002)** use the probit link here.
+
+$$Pr(Y_{ijt} = 1) = F\bigg(\alpha_j + \beta_j\theta_{it}\bigg)$$
+
+---
+
+# Dynamic IRT model
+
+- Same (diffuse) normal priors on the bill parameters $\beta_j$ and $\alpha_j$
+- For the **first** ideal point for legislator $i$ $\theta_{i0}$, we use a standard normal prior.
+- But each successive ideal point is assumed to come from a random walk centered on the *previous* ideal point
+
+$$\theta_{it} \sim \mathcal{N}(\theta_{i(t-1)}, \omega^2)$$
+--
+
+- $\omega^2$ is a user-specified "smoothing parameter" -- what is our prior belief about how "jumpy" the ideal points are from year-to-year.
+  - $\omega^2 \to 0$ is equivalent to a **pooled** IRT model where every legislator has the same ideal point in each session.
+  - $\omega^2 \to \infty$ is equivalent to the setting where each time period is analyzed **completely separately**
+
+
+---
+
+# Illustration: Supreme Court Ideology
+
+- **Martin and Quinn (2002)** implement an MCMC algorithm for this model.
+  - **Imai, Lo and Olmsted (2016)** develop a faster Variational EM algorithm for obtaining the posterior modes.
+  - Implemented in the `emIRT` package (along with the Martin and Quinn data)
+--
+
+- Load up the package
+
+```{r, message=F}
+library(emIRT)
+```
+
+- Load up the Martin and Quinn data
+
+```{r}
+data(mq_data)
+```
+
+---
+
+# Illustration: Supreme Court Ideology
+
+- What does the "data matrix" look like?
+
+```{r}
+mq_data$data.mq$rc[,4]
+```
+
+---
+
+# Illustration: Supreme Court Ideology
+
+- How about the priors?
+
+```{r}
+mq_data$priors.mq$beta.mu
+mq_data$priors.mq$beta.sigma
+```
+
+---
+
+# Illustration: Supreme Court Ideology
+
+- We use informative priors on some of the $\theta$ values to get identification
+
+```{r}
+mq_data$priors.mq$x.mu0[mq_data$priors.mq$x.mu0 != 0]
+mq_data$priors.mq$x.sigma0[mq_data$priors.mq$x.mu0 != 0]
+```
+
+Which justices do these correspond to?
+
+```{r}
+rownames(mq_data$data.mq$rc)[mq_data$priors.mq$x.mu0 != 0]
+```
+
+---
+
+# Illustration: Supreme Court Ideology
+
+- How much smoothing are we doing?
+
+```{r}
+head(mq_data$priors.mq$omega2)
+```
+
+
+---
+
+# Illustration: Supreme Court Ideology
+
+- Let's estimate the model
+
+```{r}
+mq_estimates <- dynIRT(.data = mq_data$data.mq,
+                    .starts = mq_data$cur.mq,
+                    .priors = mq_data$priors.mq,
+                    .control = {list(
+                    threads = 1,
+                    verbose = TRUE,
+                    thresh = 1e-6,
+		    maxit=500
+                    )})
+## Delete point estimates of 0, which are justices missing from that session
+mq_results <- c(t(mq_estimates$means$x))
+mq_results[mq_results==0] <- NA
+mq_results <- na.omit(mq_results)
+```
+
+---
+
+# Illustration: Supreme Court Ideology
+
+- Let's make a plot
+
+```{r}
+justice_df <- data.frame(justices = rownames(mq_data$data.mq$rc))
+justice_df$justice_id <- 1:nrow(justice_df)
+justice_df$startsession <- mq_data$data.mq$startlegis[,1]
+justice_df$endsession <- mq_data$data.mq$endlegis[,1]
+justice_df
+```
+
+---
+
+# Illustration: Supreme Court Ideology
+
+- Let's make a plot
+
+```{r}
+results_df <- data.frame(justices = mq_data$justiceName, idealpoints = mq_results)
+results_df <- left_join(results_df, justice_df, by="justices")
+results_df <- results_df %>% group_by(justices) %>% mutate(session = (row_number() - 1) + startsession)
+results_df
+```
+
+---
+
+# Illustration: Supreme Court Ideology
+
+```{r, echo=F, message=F, warning=F, fig.align = "center", fig.width=10, fig.height=5, dpi=150}
+results_df %>% ggplot(aes(x=session, y=idealpoints, colour=justices)) + geom_line() + 
+  geom_text_repel(data = results_df %>% filter(session == endsession), aes(label = justices), nudge_x = 0.5, na.rm = TRUE, min.segment.length = 100) +
+  xlab("Session") + 
+  ylab("Ideal point") + theme_bw() + theme(legend.position = "none") 
+```
+
+---
+
+# Illustration: Supreme Court Ideology
+
+- What happens when we use a lower smoothing variance?
+
+```{r}
+mq_data$priors.mq.strong <- mq_data$priors.mq
+mq_data$priors.mq.strong$omega2[,1] <- .001
+
+mq_estimates_heavysmooth <- dynIRT(.data = mq_data$data.mq,
+                    .starts = mq_data$cur.mq,
+                    .priors = mq_data$priors.mq.strong,
+                    .control = {list(
+                    threads = 1,
+                    verbose = TRUE,
+                    thresh = 1e-6,
+		    maxit=500
+                    )})
+
+## Delete point estimates of 0, which are justices missing from that session
+mq_results_heavysmooth <- c(t(mq_estimates_heavysmooth$means$x))
+mq_results_heavysmooth[mq_results_heavysmooth==0] <- NA
+mq_results_heavysmooth <- na.omit(mq_results_heavysmooth)
+results_df$idealpoint_heavysmooth <- mq_results_heavysmooth
+```
+
+---
+
+# Illustration: Supreme Court Ideology
+
+```{r, echo=F, message=F, warning=F, fig.align = "center", fig.width=10, fig.height=5, dpi=150}
+results_df %>% ggplot(aes(x=session, y=idealpoint_heavysmooth, colour=justices)) + geom_line() + 
+  geom_text_repel(data = results_df %>% filter(session == endsession), aes(label = justices), nudge_x = 0.5, na.rm = TRUE, min.segment.length = 100) +
+  xlab("Session") + 
+  ylab("Ideal point") + theme_bw() + theme(legend.position = "none") 
+```
+
+---
+
 
 # Summary
 
