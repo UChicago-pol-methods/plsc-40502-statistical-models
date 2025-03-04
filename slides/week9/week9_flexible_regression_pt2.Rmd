@@ -335,6 +335,103 @@ class: title-slide
 
 ---
 
+# Regression as optimization
+
+- Throughout this course and previous courses, our goal has been to find some function $f(x)$ of inputs $x$ that acts as a "best predictor" of $Y$
+  - We define some objective function $\mathcal{L}$ and attempt to minimize/maximize it
+  - Least squares; maximum likelihood
+--
+
+- Given a set of $n$ inputs, $\{x_i, y_i\}$, we want to find a function that solves
+  
+$$\hat{f} = \argmin_{f} \mathcal{L}(\{x_i, y_i\}_{i=1}^n)$$
+---
+
+# Space of functions
+
+- So far, we've placed severe constraints on the space of functions over which we search.
+
+--
+
+- **Linear functions**
+
+$$f(x) = \beta_0 + \beta_1x_1 + \beta_2x_2 + \beta_3x_3 + \dotsc$$
+--
+
+- **Basis expansion**
+
+$$f(X) = \sum_{m=1}^M \beta_m h_m(X)$$
+
+--
+
+- Can we be more flexible than this while still retaining computational feasibility?
+
+---
+
+# Space of functions defined by kernels
+
+- "Kernel methods" consider searching over a space of functions defined implicitly by a positive-definite kernel function.
+  - Example, the **Gaussian** kernel
+  
+$$K(x, x^\prime) = \exp\bigg(-\frac{||x - x^\prime||^2}{2\sigma^2}\bigg)$$
+--
+
+- We'll consider a search over a set of functions defined by a linear combination of kernels evaluated at the input points in our data
+
+$$f(x) = \sum_{i=1}^N c_i K(x, x_i)$$
+
+--
+
+- What is this space of functions? How "flexible" is it?
+
+---
+
+# Reproducing Kernel Hilbert Spaces
+
+- A positive semi-definite kernel function $K(x, x^\prime)$ corresponds to a space of functions known as a "reproducing kernel Hilbert space" (RKHS).
+  - A choice of kernel implies a mapping $\phi(x)$ that transforms the input vector $x$ into a higher dimensional (possibly infinite dimensional) space.
+--
+
+  - This space is equipped with an inner product $\langle \cdot, \cdot\rangle$ such that for any two functions, the inner product is given by an evaluation of the kernel at the inputs
+  
+$$K(x, x^\prime) = \langle \phi(x), \phi(x^\prime)\rangle$$
+--
+
+- As a result, we can work in the space of $\phi$ without ever having to evaluate $\phi$ directly -- only its kernel.
+
+---
+
+# "The Kernel Trick"
+
+- One important feature of optimization over functions defined over a reproducing kernel Hilbert space is that even if the functions in the space are **infinite dimensional** - solutions to optimization problems are necessarily **finite dimensional** and have the form of a linear combination of kernels.
+- The **representer theorem** states that for minimization problems of the form:
+
+$$\hat{f} = \argmin_{f} \mathcal{L}(\{x_i, y_i\}_{i=1}^n) + \lambda||f||^2$$
+
+the solution is a finite sum of weighted kernel functions
+
+$$\hat{f} = \sum_{i=1}^n \hat{c}_i K(x, x_i)$$
+
+---
+
+# Kernel Regularized Least Squares
+
+- Intuitively, what the "kernel trick" allows us to do is design a good functional approximator by way of a conventional ridge regression estimator.
+  - Relatively well-known in machine learning (particularly for classification) throughout the 2000s, but introduced to political science by **Hainmueller and Hazlett (2014)** and labeled **Kernel regularized least squares**
+--
+
+- Our regression matrix is constructed by creating a total of $N$ columns.
+  - Each row of the "kernel regression" matrix is a linear combination of the kernel evaluated between $x_i$ and each observation in the data
+
+$$f(x_i) = c_1K(x_i, x_1) + c_2K(x_i, x_2) + \dotsc c_n K(x_i, x_n)$$  
+  
+--
+
+- The regression matrix is $N \times N$
+  - We need to regularize! 
+
+---
+
 # Example: Interpolating spatial data
 
 - A very common problem in spatial statistics is predicting an outcome at any given latitude/longitude coordinate given a finite set of observations at particular coordinates
