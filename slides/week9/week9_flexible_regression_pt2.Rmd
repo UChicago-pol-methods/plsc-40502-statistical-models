@@ -1,0 +1,591 @@
+---
+title: "Week 9: Flexible Regression Pt. 2"
+subtitle: "PLSC 40502 - Statistical Models"
+# author: "Anton Strezhnev"
+output: 
+  xaringan::moon_reader:
+    self_contained: true
+    css: [default, uchicago_pol_meth.css]
+    nature:
+      highlightLines: true
+      ratio: '16:9'
+      
+---
+class: title-slide
+
+# Review
+$$
+  \require{cancel}
+  \DeclareMathOperator*{\argmin}{arg\,min}
+$$
+  
+```{r, echo = F, message=F, warnings=F}
+library(tidyverse)
+library(haven)
+library(estimatr)
+library(knitr)
+library(splines)
+library(lubridate)
+
+options(digits=3)
+
+set.seed(60639)
+
+```
+
+---
+
+# Previously
+
+$$
+  \DeclareMathOperator*{\argmax}{arg\,max}
+$$
+
+- **Flexible functional forms**
+  - Model $E[Y|X] = f(x)$ as a linear combination of **basis functions**
+  - Polynomial bases
+  - Step-function bases
+  - Splines as a compromise between the two!
+- **Regularization**
+  - Many regressors $\leadsto$ overfitting
+  - Penalize fits with many *extreme* covariates -- pull estimates towards zero.
+  - L2 penalty ("ridge regression") - equivalent to Bayesian normal regression
+  - L1 penalty ("lasso") - sparse solutions w/ many coefficients set to zero.
+---
+
+# This week
+
+- **Kernels**
+  - "Kernel smoothing" - Kernels as a "localization" tool
+  - "Kernel methods" - Kernels as regression inputs
+  - Two *different* uses of the term/concept - but some interesting relations
+- **Forests**
+  - Tree-based models for classification and regression
+  - Ensembles/averages of trees via **random forests**
+  - Diagnostics via "variable smoothing"
+  - Extensions to detecting causal heterogeneity
+  
+---
+class: title-slide
+
+# Kernel smoothing
+
+---
+
+# Example: Modeling Bike Rentals
+
+- Recall again our **bikeshare usage** dataset
+  - Fanaee-T, Hadi, and Gama, Joao, "Event labeling combining ensemble detectors and background knowledge", *Progress in Artificial Intelligence* (2013): pp. 1-15
+--
+
+```{r, warning=F, message=F}
+bike <- read_csv("data/bikes_hour.csv")
+bike_by_hour <- bike %>% group_by(hr) %>% summarize(cnt = mean(cnt))
+```
+
+---
+
+# Example: Modeling Bike Rentals
+
+- Our most intuitive approach to estimating the CEF was to just take the **average** for a given hour of the day
+
+```{r, message = F, warning=F, fig.width=9, fig.height=6, fig.align="center", echo=F}
+bike %>% ggplot(aes(x=hr, y=cnt)) + geom_point(alpha=.1) + geom_point(data=bike_by_hour, col="red", shape=15, size=5)  + xlab("Hour of the day") + ylab("Count of Users") +
+  theme_bw() + theme(text = element_text(size = 16))     
+```
+
+---
+
+# Kernel smoothing
+
+- One downside - I can only evaluate the function at each discrete hour.
+  - What would I predict is the usage at 7:45pm?
+  - Intuitively, I would want to take the average of the "nearest data points"
+--
+
+- **Kernel smoothing** methods give us a straightforward, non-parametric approach to estimating $f(x) = E[Y|X=x]$ without making strong assumptions about the functional form of the CEF.
+  - "weighted average" of "similar" observations
+--
+
+- We define the similarity between two points $x_0$ and $x$ by way of a **kernel function** $K_h()$
+
+$$K_h(x_0, x) = D\bigg(\frac{|x - x_0|}{h(x_0)}\bigg)$$
+
+- $D$ is our particular choice of kernel function and $h(x_0)$ is the "bandwidth" or "window size"
+  - Often use a constant bandwidth that does not depend on the inputs $h(x_0) = h$
+--
+
+- The kernel function is **symmetric** and **non-negative** 
+
+
+---
+
+# Kernel smoothing
+
+- Uniform kernel
+
+$$D(u) = \begin{cases} \frac{1}{2} &\text{ if } |u| \le 1\\
+0 & \text{ otherwise}\end{cases}$$
+--
+
+- Triangular kernel
+
+$$D(u) = \begin{cases} 1 - |u| &\text{ if } |u| \le 1\\
+0 & \text{ otherwise}\end{cases}$$
+--
+
+- Gaussian (or "radial basis") kernel
+
+$$D(u) = \frac{1}{2\pi}\exp\bigg(-\frac{1}{2}u^2\bigg)$$
+
+---
+
+# Kernel smoothing
+
+```{r}
+uniform_kernel <- function(x) {
+  ifelse(abs(x) <= 1, 1/2, 0)
+}
+
+triangular_kernel <- function(x) {
+  ifelse(abs(x) <= 1, 1 - abs(x), 0)
+}
+
+gaussian_kernel <- function(x) {
+  (1 / sqrt(2 * pi)) * exp(-0.5 * x^2)
+}
+```
+
+---
+
+# Kernel smoothing
+
+```{r,  message = F, warning=F, fig.width=9, fig.height=6, fig.align="center", echo=F}
+# Generate a sequence of x values
+x_values <- seq(-3, 3, by = 0.01)
+
+# Create a data frame with the kernel functions
+kernels_df <- data.frame(
+  x = rep(x_values, 3),
+  y = c(sapply(x_values, uniform_kernel), 
+        sapply(x_values, triangular_kernel), 
+        sapply(x_values, gaussian_kernel)),
+  kernel = rep(c('Uniform', 'Triangular', 'Gaussian'), each = length(x_values))
+)
+
+# Plot the kernel functions using ggplot2
+ggplot(kernels_df, aes(x = x, y = y, color = kernel)) +
+  geom_line(size = 1.2) +
+  labs(title = "Kernel Functions",
+       x = "u",
+       y = "Density",
+       color = "Kernel Type") +
+  theme_bw() +
+  theme(legend.position = "top")
+```
+
+---
+
+# Nadaraya-Watson estimator
+
+- For a set of $N$ observations indexed by $i$ $\{y_i, x_i\}$ and given a kernel function $K_h()$ and a chosen bandwidth $h$, the **Nadarya-Watson** estimator of $f(x) = E[Y|X = x]$ is:
+
+$$\hat{f}(x) = \frac{\sum_{i=1}^n K_h(x - x_i)y_i}{\sum_{i=1}^n K_h(x - x_i)}$$
+
+--
+
+- Our best prediction for $Y$ at $x$ is the average of the observed $y_i$, weighted by the "closeness" of their corresponding $x_i$ to the input $x$.
+
+--
+
+- Some intuitions:
+  - **Larger bandwidths** = more influence from "further" points (lower variance, higher bias)
+  - **Smaller bandwidths** = only "close" points have meaningful weight (higher variance, lower bias)
+  
+---
+
+# Example: Modeling Bike Rentals
+
+- In R, local kernel smoothing methods are implemented in the package `np`
+
+```{r}
+library(np)
+```
+
+- We'll start with a uniform kernel and a bandwidth of 3
+
+```{r}
+kernel_reg <- npreg(cnt ~ hr, data=bike, ckertype="uniform", bws = 3, regtype='lc')
+summary(kernel_reg)
+```
+
+---
+
+# Example: Modeling Bike Rentals
+
+- Generate predictions on a sequence of points and plot the line
+
+```{r}
+kernel_predict <- data.frame(hr = seq(0, 23, by=.01),
+                             cnt = predict(kernel_reg, newdata=data.frame(hr = seq(0, 23, by=.01))))
+```
+
+---
+
+# Example: Modeling Bike Rentals
+
+```{r, message = F, warning=F, fig.width=9, fig.height=6, fig.align="center", echo=F}
+bike %>% ggplot(aes(x=hr, y=cnt)) + geom_point(alpha=.1) + geom_point(data=bike_by_hour, col="red", shape=15, size=5)  +
+  geom_line(data = kernel_predict, linewidth=2, col = "dodgerblue") + 
+  xlab("Hour of the day") + ylab("Count of Users") +
+  theme_bw() + theme(text = element_text(size = 16)) 
+```
+
+---
+
+# Example: Modeling Bike Rentals
+
+- What about if we use a gaussian kernel
+
+```{r}
+gaussian_kernel <- npreg(cnt ~ hr, data=bike, ckertype="gaussian", bws = 3, regtype='lc')
+summary(gaussian_kernel)
+```
+
+```{r}
+gaussian_predict <- data.frame(hr = seq(0, 23, by=.01),
+                             cnt = predict(gaussian_kernel, newdata=data.frame(hr = seq(0, 23, by=.01))))
+```
+
+---
+
+# Example: Modeling Bike Rentals
+
+```{r, message = F, warning=F, fig.width=9, fig.height=6, fig.align="center", echo=F}
+bike %>% ggplot(aes(x=hr, y=cnt)) + geom_point(alpha=.1) + geom_point(data=bike_by_hour, col="red", shape=15, size=5)  +
+  geom_line(data = gaussian_predict, linewidth=2, col = "dodgerblue") + 
+  xlab("Hour of the day") + ylab("Count of Users") +
+  theme_bw() + theme(text = element_text(size = 16)) 
+```
+
+---
+
+# Example: Modeling Bike Rentals
+
+- What happens with a narrower bandwidth?
+
+```{r}
+gaussian_kernel_2 <- npreg(cnt ~ hr, data=bike, ckertype="gaussian", bws = 1, regtype='lc')
+summary(gaussian_kernel_2)
+```
+
+```{r}
+gaussian_predict_2 <- data.frame(hr = seq(0, 23, by=.01),
+                             cnt = predict(gaussian_kernel_2, newdata=data.frame(hr = seq(0, 23, by=.01))))
+```
+
+---
+
+# Example: Modeling Bike Rentals
+
+```{r, message = F, warning=F, fig.width=9, fig.height=6, fig.align="center", echo=F}
+bike %>% ggplot(aes(x=hr, y=cnt)) + geom_point(alpha=.1) + geom_point(data=bike_by_hour, col="red", shape=15, size=5)  +
+  geom_line(data = gaussian_predict_2, linewidth=2, col = "dodgerblue") + 
+  xlab("Hour of the day") + ylab("Count of Users") +
+  theme_bw() + theme(text = element_text(size = 16)) 
+```
+
+---
+
+# Local linear regression
+
+- Instead of just making our prediction a weighted average, we can incorporate a least-squares adjustment
+  - Fit a **line** rather than a **constant**
+--
+
+- Our prediction for $f(x)$ is defined as the solution to the **least-squares** problem in terms of intercept $\alpha(x)$ and slope $\beta(x)$
+
+$$\sum_{i=1}^n K_h(x, x_i)[y_i - \alpha(x) - \beta(x) x_i]$$
+--
+
+- Let's fit this with `np` using a uniform kernel and a narrow bandwidth.
+
+```{r}
+uniform_local_linear <- npreg(cnt ~ hr, data=bike, ckertype="uniform", bws = 2, regtype='ll')
+uniform_predict_ll <- data.frame(hr = seq(0, 23, by=.01),
+                             cnt = predict(uniform_local_linear, newdata=data.frame(hr = seq(0, 23, by=.01))))
+```
+
+---
+
+# Example: Modeling Bike Rentals
+
+```{r, message = F, warning=F, fig.width=9, fig.height=6, fig.align="center", echo=F}
+bike %>% ggplot(aes(x=hr, y=cnt)) + geom_point(alpha=.1) + geom_point(data=bike_by_hour, col="red", shape=15, size=5)  +
+  geom_line(data = uniform_predict_ll, linewidth=2, col = "dodgerblue") + 
+  xlab("Hour of the day") + ylab("Count of Users") +
+  theme_bw() + theme(text = element_text(size = 16)) 
+```
+
+---
+
+class: title-slide
+
+# Kernel Methods
+
+---
+
+# Example: Interpolating spatial data
+
+- A very common problem in spatial statistics is predicting an outcome at any given latitude/longitude coordinate given a finite set of observations at particular coordinates
+  - e.g. What is the estimated average temperature given observations at a number of weather monitoring stations?
+  - Finding the "best" interpolation between the observed points is known as "kriging" in the geostatistics literature
+--
+
+- We'll use a sample of U.S. weather stations as an example:
+
+```{r}
+library(sf)
+library(geosphere)
+```
+
+---
+
+# Example: Interpolating spatial data
+
+- Start by reading in the U.S. shapefile
+
+```{r}
+us_shapefile <- read_rds("data/us_shapefile.rds") %>%
+  filter(!(STUSPS %in% c("AK", "HI", "AS", "GU", "MP", "PR", "VI")))
+```
+
+- Next, read in the NOAA Climate Assessment Database monthly weather station data from January, 2025.
+
+```{r}
+weather <- read_csv("data/monthly_summary_202501_v2.csv") %>% filter(country == "UNITED_STATES")
+weather <- weather %>% filter(atmp > -99999&ntmp > -99999) # Missing obs hard coded as -99999
+weather <- weather %>% mutate(deviation = atmp - ntmp)
+weather <- weather %>% filter(!(state %in% c("AK", "HI", "AS", "GU", "MP", "UM", "PR", "VI")))
+```
+
+---
+
+# Example: Interpolating spatial data
+
+- Convert to a plotable object and overlay on the map
+
+```{r}
+# Convert the stations to a plottable object
+weather_sf <- st_as_sf(weather, coords = c("lon", "lat"), crs = st_crs(us_shapefile), remove=F)
+```
+
+---
+
+# Example: Interpolating spatial data
+
+```{r,  message = F, warning=F, fig.width=9, fig.height=4, fig.align="center", echo=F, dpi=150}
+# Create the ggplot
+ggplot(data = weather_sf) +
+  # Plot the U.S. boundaries
+  geom_sf(data = us_shapefile, fill = "white", color = "black") +
+  # Plot the points
+  geom_point(aes(x=lon, y=lat, colour = deviation)) +
+  scale_colour_viridis_c() +  # You can change the color scale as needed
+  labs(title = "CADB Stations",
+       colour = "Deviation") +
+  theme_minimal()
+```
+
+---
+
+# Example: Interpolating spatial data
+
+```{r,  message = F, warning=F, fig.width=9, fig.height=4, fig.align="center", echo=F, dpi=150}
+# Create the ggplot
+ggplot(data = weather_sf %>% filter(deviation < quantile(weather$deviation, .99))) +
+  # Plot the U.S. boundaries
+  geom_sf(data = us_shapefile, fill = "white", color = "black") +
+  # Plot the points
+  geom_point(aes(x=lon, y=lat, colour = deviation)) +
+  scale_colour_viridis_c() +  # You can change the color scale as needed
+  labs(title = "CADB Stations (dropped outliers)",
+       colour = "Deviation") +
+  theme_minimal()
+```
+
+---
+
+# Example: Interpolating spatial data
+
+- We'll make a grid of 50km squares on which to to evaluate our predictions
+
+```{r, cache=T}
+# Set boundaries for U.S. (approximate)
+lat_min <- 24.396308  # Southernmost point (Florida)
+lat_max <- 49.384358  # Northernmost point (Canada border)
+lon_min <- -125.0     # Westernmost point (California)
+lon_max <- -66.93457  # Easternmost point (Maine)
+
+# Approximate 50 km in degrees (this will vary by latitude, but we'll use an average factor)
+lat_interval <- 50 / 110.574  # 1 degree latitude ≈ 110.574 km
+lon_interval <- 50 / (111.320 * cos(mean(c(lat_min, lat_max)) * pi / 180))  # Longitude interval varies with latitude
+
+# Create a sequence of points for latitude and longitude
+latitudes <- seq(lat_min, lat_max, by = lat_interval)
+longitudes <- seq(lon_min, lon_max, by = lon_interval)
+
+# Create a grid of all combinations of latitudes and longitudes
+grid_points <- expand.grid(lat = latitudes, lon = longitudes)
+
+# Convert the grid points to an 'sf' object
+grid_points_sf <- st_as_sf(grid_points, coords = c("lon", "lat"), crs = st_crs(us_shapefile), remove=F)
+
+# Filter grid points to keep only those within the U.S. boundary
+grid_points_within_us <- st_intersection(grid_points_sf, us_shapefile)
+```
+
+# Example: Interpolating spatial data
+
+- Simple linear regression seems to miss a lot of the geographic nuances.
+
+```{r}
+weather_linear <- lm(deviation ~ lat + lon + lat*lon, data=weather)
+grid_points_within_us$linpredict <- predict(weather_linear, newdata=grid_points_within_us)
+```
+
+---
+
+# Example: Interpolating spatial data
+
+```{r,  message = F, warning=F, fig.width=9, fig.height=4, fig.align="center", echo=F, dpi=150}
+# Create the ggplot
+ggplot(data = grid_points_within_us) +
+  # Plot the U.S. boundaries
+  geom_sf(data = us_shapefile, fill = "white", color = "black") +
+  # Plot the heatmap with grid squares
+  geom_tile(aes(x = lon, y = lat, fill = linpredict), width = lon_interval, height = lat_interval) +
+  scale_fill_viridis_c() +  # You can change the color scale as needed
+  coord_sf(xlim = c(lon_min, lon_max), ylim = c(lat_min, lat_max), expand = FALSE) +
+  labs(title = "Linear regression interpolation",
+       fill = "Deviation") +
+  theme_minimal()
+```
+
+---
+
+# Kernel Regularized Least Squares
+
+- What happens when we fit KRLS with latitude and longitude as the covariate inputs.
+
+```{r}
+library(KRLS)
+```
+
+- Estimate the model 
+  - We use the default Hainmueller and Hazlett (2014) approach to setting the bandwidth equal to the number of dimensions in the data. 
+  - Standard leave-one-out cross-validation of the penalty parameter
+
+```{r krls, warning=F, cache=T}
+krls_reg <- krls(X = model.matrix(~lat + lon, data=weather)[,-1],
+                 y = weather$deviation,
+                 whichkernel = "gaussian",
+                 vcov=F,
+                 derivative=F)
+```
+
+---
+
+# Kernel Regularized Least Squares
+
+- What do the inputs look like?
+
+```{r}
+dim(krls_reg$K)
+head(krls_reg$K[,1])
+head(krls_reg$K[,2])
+head(krls_reg$K[,3])
+```
+
+
+---
+
+# Kernel Regularized Least Squares
+
+- What do the inputs look like?
+
+```{r, fig.align="center"}
+hist(krls_reg$K)
+```
+
+
+---
+
+# Kernel Regularized Least Squares
+
+- Predict using the KRLS regression for each of our grid squares.
+
+```{r}
+grid_points_within_us$krlspredict <- predict(krls_reg, newdata= model.matrix(~lat + lon, data=grid_points_within_us)[,-1])$fit
+```
+
+---
+
+# Kernel Regularized Least Squares
+
+```{r,  message = F, warning=F, fig.width=9, fig.height=4, fig.align="center", echo=F, dpi=150}
+# Create the ggplot
+ggplot(data = grid_points_within_us) +
+  # Plot the U.S. boundaries
+  geom_sf(data = us_shapefile, fill = "white", color = "black") +
+  # Plot the heatmap with grid squares
+  geom_tile(aes(x = lon, y = lat, fill = krlspredict), width = lon_interval, height = lat_interval) +
+  scale_fill_viridis_c() +  # You can change the color scale as needed
+  coord_sf(xlim = c(lon_min, lon_max), ylim = c(lat_min, lat_max), expand = FALSE) +
+  labs(title = "Kernel Regularized Least Squares interpolation",
+       fill = "Deviation") +
+  theme_minimal()
+```
+
+---
+
+# Kernel Regularized Least Squares
+
+- What if we chose a smaller bandwidth for the Gaussian kernel?
+
+```{r krls2, warning=F, cache=T}
+krls_reg_2 <- krls(X = model.matrix(~lat + lon, data=weather)[,-1],
+                 y = weather$deviation,
+                 sigma = 1/5,
+                 whichkernel = "gaussian",
+                 vcov=F,
+                 derivative=F)
+```
+
+---
+
+# Kernel Regularized Least Squares
+
+- Predict using the KRLS regression for each of our grid squares.
+
+```{r}
+grid_points_within_us$krlspredict2 <- predict(krls_reg_2, newdata= model.matrix(~lat + lon, data=grid_points_within_us)[,-1])$fit
+```
+
+---
+
+# Kernel Regularized Least Squares
+
+```{r,  message = F, warning=F, fig.width=9, fig.height=4, fig.align="center", echo=F, dpi=150}
+# Create the ggplot
+ggplot(data = grid_points_within_us) +
+  # Plot the U.S. boundaries
+  geom_sf(data = us_shapefile, fill = "white", color = "black") +
+  # Plot the heatmap with grid squares
+  geom_tile(aes(x = lon, y = lat, fill = krlspredict2), width = lon_interval, height = lat_interval) +
+  scale_fill_viridis_c() +  # You can change the color scale as needed
+  coord_sf(xlim = c(lon_min, lon_max), ylim = c(lat_min, lat_max), expand = FALSE) +
+  labs(title = "Kernel Regularized Least Squares interpolation (smaller bandwidth)",
+       fill = "Deviation") +
+  theme_minimal()
+```
